@@ -1,0 +1,40 @@
+export const MAGICAL_ELEMENTS = [
+  "Clockwork Vines", "Whimsical Mushrooms", "Fairies", "Glass Leaves", 
+  "Glowing Spores", "Rainbow Light", "Crystal Ferns", "Moonlight Vines", 
+  "Nebula Orchids", "Stardust Petals", "Bioluminescent Moss", "Silver Roots",
+  "Floating Pollen", "Emerald Thorns", "Solar Sunflowers", "Frost Lilies",
+  "Dragonfly Wings", "Golden Sap", "Velvet Bark", "Prismatic Seeds"
+];
+
+export const POSITIVE_QUOTES = [
+  "Keep your face always toward the sunshine.",
+  "The best is yet to be.",
+  "You are capable of amazing things.",
+  "Every day is a second chance.",
+  "Choose to be optimistic, it feels better.",
+  "Believe you can and you're halfway there.",
+  "Happiness is not by chance, but by choice.",
+  "Your potential is endless.",
+  "Be the reason someone smiles today.",
+  "The only way to do great work is to love what you do.",
+  "Dream big and dare to fail.",
+  "Stay positive, work hard, make it happen.",
+  "You are enough just as you are.",
+  "Kindness is free, sprinkle it everywhere.",
+  "Focus on the good.",
+  "The sun will rise and we will try again.",
+  "You make a difference.",
+  "Small steps lead to big changes.",
+  "Life is tough but so are you.",
+  "Good things take time.",
+  "Spread love everywhere you go.",
+  "Your vibe attracts your tribe.",
+  "Be a voice, not an echo.",
+  "The best time for new beginnings is now.",
+  "Grateful for where I am, excited for where I'm going.",
+  "Don't stop until you're proud.",
+  "Magic happens when you don't give up.",
+  "You are stronger than you think.",
+  "Radiate positivity.",
+  "The world needs your light."
+];
