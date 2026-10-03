@@ -27,7 +27,13 @@ http.createServer(async (req, res) => {
       out.pages.forEach((p) => { for (const k of ["image", "inset"]) if (p[k]) p[k].prompt = `${p.heading || p.type} in ${city}, golden hour`; });
       delete out.meta.url;
     }
-    message = { role: "assistant", content: "```json\n" + JSON.stringify(out) + "\n```" };
+    let content = "```json\n" + JSON.stringify(out) + "\n```";
+    // MOCK_BROKEN=quote: almost-JSON like real models emit; =garbage: unparseable until the repair call
+    const isRepair = /You repair JSON/.test(body.messages[0].content);
+    if (process.env.MOCK_BROKEN === "quote" && !isRepair) content = content.replace('"Seven hills', '"The "Valley of the Sun" and seven hills').replace('","country"', '" "country"');
+    if (process.env.MOCK_BROKEN === "garbage" && !isRepair) content = "I'm sorry, here is the guide: <<pages>> ...";
+    if (isRepair) content = JSON.stringify(out);
+    message = { role: "assistant", content };
   }
   res.writeHead(200, { "content-type": "application/json" });
   res.end(JSON.stringify({ id: "mock", model: body.model, choices: [{ index: 0, message, finish_reason: "stop" }], usage: { prompt_tokens: 10, completion_tokens: 10, cost: body.modalities ? 0.02 : 0.0012 } }));

@@ -43,6 +43,7 @@ Rules:
 - itinerary.days: titles are short; stops use 24h times.
 - practical.phrases: 4 phrases in the local language with English (keys "pt" = local phrase, "en" = English).
 - Every image object: keep "scene" (one of: ${sceneNames.join(", ")} — pick the closest mood) and add "prompt": a vivid 15–30 word description of a REAL view in ${city} for an editorial photograph that fits that slot (subject, place, light, time of day). No text or signage in the image.
+- JSON hygiene: inside string values never use straight double quotes (use ‘ ’ or “ ” instead), no trailing commas, no comments.
 - Headings must stay short (the "heading" of a neighbourhood is just the district name).
 
 Example:
@@ -156,7 +157,19 @@ export async function* generateBook({ city, brief, images = "key", theme }, { si
   const messages = [{ role: "system", content: SYSTEM }, { role: "user", content: userPrompt(city, brief) }];
   let book;
   try {
-    const r = await chatJSON(messages, { signal });
+    let r;
+    try {
+      r = await chatJSON(messages, { signal });
+    } catch (e) {
+      if (e.code !== "BAD_JSON") throw e;
+      // Local repair failed: ask the model to re-emit its own reply as valid JSON.
+      spent += e.cost || 0;
+      yield { step: "write", message: "Fixing the formatting…" };
+      r = await chatJSON([
+        { role: "system", content: "You repair JSON. Output only the corrected JSON object: escape inner double quotes, add missing commas, remove trailing commas. Do not change the content." },
+        { role: "user", content: e.raw.slice(0, 60000) },
+      ], { signal, temperature: 0 });
+    }
     spent += r.cost;
     try { book = sanitize(r.data, { city, theme }); }
     catch (e) {

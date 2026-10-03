@@ -1,3 +1,5 @@
+import { jsonrepair } from "jsonrepair";
+
 // OpenRouter client. The API key is read from the server environment only.
 const BASE = () => process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
 export const models = () => ({
@@ -31,18 +33,32 @@ async function call(body, { signal } = {}) {
 
 const cost = (r) => Number(r?.usage?.cost) || 0;
 
+// LLMs occasionally emit almost-JSON: an unescaped quote inside a string, a
+// missing comma, a trailing comma, a code fence, chatter around the object, or a
+// reply cut off at max_tokens. Try strict parsing first, then repair locally.
 export function parseJson(s) {
-  const t = String(s || "").replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, "");
-  try { return JSON.parse(t); } catch {}
+  const t = String(s || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
   const a = t.indexOf("{"), b = t.lastIndexOf("}");
-  if (a >= 0 && b > a) return JSON.parse(t.slice(a, b + 1));
-  throw new Error("Model did not return JSON");
+  const body = a >= 0 ? t.slice(a, b > a ? b + 1 : undefined) : t;
+  let first;
+  for (const attempt of [() => JSON.parse(t), () => JSON.parse(body), () => JSON.parse(jsonrepair(body)), () => JSON.parse(jsonrepair(t))]) {
+    try {
+      const v = attempt();
+      if (v && typeof v === "object" && !Array.isArray(v)) return v;
+    } catch (e) { first ||= e; }
+  }
+  throw Object.assign(new Error(`The model's reply wasn't valid JSON (${first?.message || "empty reply"})`), { code: "BAD_JSON", raw: t });
 }
 
-export async function chatJSON(messages, { maxTokens = 9000, temperature = 0.7, signal } = {}) {
+export async function chatJSON(messages, { maxTokens = 12000, temperature = 0.5, signal } = {}) {
   const r = await call({ model: models().text, messages, temperature, max_tokens: maxTokens, response_format: { type: "json_object" } }, { signal });
-  const msg = r.choices?.[0]?.message;
-  return { data: parseJson(msg?.content), cost: cost(r) };
+  const choice = r.choices?.[0];
+  try {
+    return { data: parseJson(choice?.message?.content), cost: cost(r), truncated: choice?.finish_reason === "length" };
+  } catch (e) {
+    e.cost = cost(r);
+    throw e;
+  }
 }
 
 // Image models on OpenRouter return images on the assistant message as base64 data URLs.

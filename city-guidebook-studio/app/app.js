@@ -270,6 +270,8 @@ async function showGenerate() {
   $("#make").hidden = false;
   const bar = $("#makeBar"), step = $("#makeStep"), grid = $("#makeGrid"), costEl = $("#makeCost");
   grid.innerHTML = ""; bar.style.width = "2%"; costEl.textContent = ""; $(".make-actions").hidden = false;
+  $$(".make-actions .btn-ink").forEach((b) => b.remove());
+  $$("#make .make-grid").forEach((g, i) => i && g.remove());
   $("#makeTitle").textContent = req.city;
   document.title = `Writing ${req.city} · Guidebook Studio`;
   const ac = (genAbort = new AbortController());
@@ -347,6 +349,11 @@ async function showGenerate() {
     step.textContent = "Couldn't finish: " + e.message;
     $("#makeCancel").textContent = book ? "Open what we have" : "Back";
     $("#makeCancel").onclick = () => (location.hash = book ? `#/edit/${id}` : "#/");
+    if (!book) {
+      const retry = Object.assign(document.createElement("button"), { className: "btn btn-ink", textContent: "Try again", style: "margin-left:8px" });
+      retry.onclick = () => { retry.remove(); genRequest = req; showGenerate(); };
+      $(".make-actions").append(retry);
+    }
   } finally {
     if (genAbort === ac) genAbort = null;
   }
