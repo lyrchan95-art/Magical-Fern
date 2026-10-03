@@ -1,19 +1,29 @@
-// A theme is a bundle of tokens. Switching theme restyles the whole book.
+// A theme is a bundle of tokens: palette + type pairing. Switching theme
+// restyles the whole book; content and layout stay put.
 export const themes = {
-  tile: {
-    name: "Azulejo",
-    paper: "#f6efe0", ink: "#1d2433", muted: "#6b6a64",
-    primary: "#1f4e8c", accent: "#d9593d", gold: "#e6a935", sky: "#bcd6e6", soft: "#e9dfc8",
-    radius: "2mm", tape: "rgba(230,169,53,.75)",
+  couture: {
+    name: "Couture",
+    blurb: "High-fashion editorial. Didone headlines, white space, a single red.",
+    paper: "#ffffff", ink: "#111111", muted: "#6f6a64", accent: "#d0021b", soft: "#f3efe9", rule: "#111111",
+    display: "'Bodoni Moda', 'Didot', serif", text: "'Source Serif 4', Georgia, serif", sans: "'Jost', 'Futura', sans-serif",
+    displayWeight: 500,
   },
-  postcard: {
-    name: "Retro Postcard",
-    paper: "#fbf3e4", ink: "#2b2320", muted: "#7a6d63",
-    primary: "#c8402f", accent: "#1f7a7a", gold: "#f0b43c", sky: "#f2c9a0", soft: "#f0e2c8",
-    radius: "0mm", tape: "rgba(31,122,122,.6)",
+  azulejo: {
+    name: "Azulejo",
+    blurb: "Cobalt and cream, borrowed from the tiles on every facade.",
+    paper: "#f7f1e5", ink: "#16243b", muted: "#5f6878", accent: "#1f4e8c", soft: "#ebe2cf", rule: "#1f4e8c",
+    display: "'Playfair Display', Georgia, serif", text: "'Source Serif 4', Georgia, serif", sans: "'Jost', sans-serif",
+    displayWeight: 700,
+  },
+  riviera: {
+    name: "Riviera",
+    blurb: "Sun-faded terracotta and blush, like a postcard left on the dash.",
+    paper: "#fbf3ea", ink: "#2b211d", muted: "#86736a", accent: "#c4553a", soft: "#f3e1d3", rule: "#2b211d",
+    display: "'Bodoni Moda', serif", text: "'Source Serif 4', Georgia, serif", sans: "'Jost', sans-serif",
+    displayWeight: 400,
   },
 };
 
 export function themeCss(t) {
-  return `:root{--paper:${t.paper};--ink:${t.ink};--muted:${t.muted};--primary:${t.primary};--accent:${t.accent};--gold:${t.gold};--sky:${t.sky};--soft:${t.soft};--radius:${t.radius};--tape:${t.tape}}`;
+  return `:root{--paper:${t.paper};--ink:${t.ink};--muted:${t.muted};--accent:${t.accent};--soft:${t.soft};--rule:${t.rule};--display:${t.display};--text:${t.text};--sans:${t.sans};--dw:${t.displayWeight}}`;
 }
