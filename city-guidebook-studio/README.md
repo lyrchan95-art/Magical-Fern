@@ -9,10 +9,32 @@ Type a city, get a fashion-magazine-grade guidebook, refine it in a visual edito
 ```bash
 npm install
 npx playwright install chromium   # one-time: the browser used for PDF export
+cp .env.example .env              # then put your OpenRouter key in .env
 npm start                         # → http://localhost:5173
 ```
 
-Open the URL, type **Lisbon** (the sample issue), pick a look, and press **Create guidebook**.
+Type **any city**, optionally add a focus ("food and design", "with kids"), choose how many photographs to generate, and press **Create guidebook**. Without a key the app still runs: open the Lisbon sample issue and edit it.
+
+## AI (OpenRouter)
+
+| Job | Model (override in `.env`) | Rough cost |
+|---|---|---|
+| Research, curation and copy for the whole issue, as schema-shaped JSON | `qwen/qwen3-235b-a22b-2507` (`TEXT_MODEL`) | < $0.01 per issue |
+| Editorial photographs | `sourceful/riverflow-v2-fast` (`IMAGE_MODEL`) | ≈ $0.02 per image |
+
+- **The key stays on the server.** `server.js` reads `OPENROUTER_API_KEY` from `.env`, which git ignores. The browser never sees the key.
+- **Generation streams live.** The composing screen shows the issue being written, then each photograph arriving, then what it cost (from OpenRouter's reported usage).
+- **Photography modes.** *Key photos* covers the cover, contents, letter, three feature openers and the sight page: 7 images, about $0.15. *Every image* is about 22 images, about $0.45. *Illustrations* uses no image calls.
+- **In the editor.** *Generate a photo* works on any image slot; the prompt is pre-filled with what the model wrote for that slot, at the right aspect ratio. *Rewrite with AI* works on any page ("punchier", "add a vegetarian option") and keeps its layout and photos.
+- **Model output is sanitized** (`src/generate.js`) before it reaches a template, so a malformed reply can't crash a page. An invalid reply gets one automatic repair pass.
+- **Testing offline.** `node scripts/mock-openrouter.js` starts a fake OpenRouter. Run `OPENROUTER_BASE_URL=http://127.0.0.1:5199 npm start` against it.
+
+## Saving
+
+Every guidebook is saved in your browser's local storage: IndexedDB, since AI photos are too large for `localStorage`. Photos are compressed to JPEG first.
+- **Autosave.** Saves after every edit, plus a **Save** button (⌘S) and **Save a copy**.
+- **Your guidebooks.** A shelf on the start page lets you open, duplicate, download as JSON or delete.
+- **Import JSON.** Brings a guidebook back in, or moves it to another browser.
 
 Command-line build without the app:
 
@@ -23,7 +45,7 @@ node scripts/build.js data/lisbon.json riviera   # any theme: couture | azulejo 
 
 ## The studio
 
-**Start screen.** A city input with three looks (Couture, Azulejo, Riviera), each shown as a live cover preview. An unknown city gets an honest message that AI generation is the next milestone.
+**Start screen.** A city input, an optional focus, a photography mode, three looks (Couture, Azulejo, Riviera) with live cover previews, and your saved guidebooks.
 
 **Composing screen.** The issue is assembled page by page while it renders and checks fit.
 
@@ -53,7 +75,9 @@ Themes are token bundles (palette, display face and weight). Switching a theme r
 | Path | Role |
 |---|---|
 | `server.js` | Zero-dependency server: app, `/api/render`, `/api/pdf`, `/api/catalog`, `/api/scene/:name.svg` |
-| `app/` | The studio UI (vanilla JS, no build step) |
+| `app/` | The studio UI (vanilla JS, no build step); `app/library.js` is the local save library |
+| `src/ai.js` | OpenRouter client (text JSON + image generation) |
+| `src/generate.js` | Prompts, output sanitizer, photo plan, streaming pipeline, page rewrite |
 | `data/lisbon.json` | Sample issue: the content schema the AI pipeline will target |
 | `src/templates.js` | 12 page templates. Every text node has a `data-edit` path and every image a `data-img` path |
 | `src/book.css` | Magazine design system: trim, type scale, grids, page furniture |
@@ -63,7 +87,7 @@ Themes are token bundles (palette, display face and weight). Switching a theme r
 | `src/pdf.js` | Headless Chromium export, so the PDF matches the screen |
 
 ## Known limits / next steps
-- **Content.** Lisbon is the only city so far. Next is the AI research and curation pipeline that writes this same JSON for any city.
-- **Photos.** Placeholder imagery is illustration. Upload or paste real photos per slot, or wire in Unsplash or Wikimedia sourcing with attribution.
+- **Facts come from the model alone.** There's no live data source yet, so treat places, hours and prices as "verify before travel" (the issue says so). The next step is grounding in Wikivoyage, OpenStreetMap and a Places API.
+- **AI photos are generated, not real.** They're labelled "AI-generated" in the credit field; upload real photos where accuracy matters.
 - **Print output.** The PDF is RGB with no bleed or crop marks. A print preset (bleed, CMYK hand-off) is still to come.
 - **Illustration labels.** The tiny labels inside the illustrations ("28 Graça", "Fado") use system fonts.

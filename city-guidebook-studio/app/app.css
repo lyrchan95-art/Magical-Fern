@@ -99,6 +99,44 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke
 .steps p{color:var(--muted);font-size:14px;max-width:340px}
 .foot{padding:18px clamp(16px,4vw,56px);font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
 
+.ai-opts{max-width:620px;margin-top:16px;display:grid;gap:12px}
+.brief span{display:block;font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.brief em{font-style:normal;letter-spacing:.04em;text-transform:none;font-weight:400}
+.brief input{width:100%;height:40px;border:1px solid var(--line2);background:var(--panel);padding:0 12px}
+.brief input:focus{outline:none;border-color:var(--ink)}
+.photo-mode{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.photo-mode>span{font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-right:6px}
+.photo-mode label{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--line2);background:var(--panel);font-size:13px;cursor:pointer}
+.photo-mode label:has(input:checked){border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.photo-mode input{accent-color:var(--ink)}
+.photo-mode em{font-style:normal;color:var(--muted);font-size:12px}
+.shelf{padding:30px clamp(16px,4vw,56px) 36px;border-top:1px solid var(--line)}
+.shelf-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:4px}
+.shelf h2{font-family:var(--serif);font-weight:400;font-size:30px}
+.shelf h2 span{font-family:var(--sans);font-size:14px}
+.shelf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:20px;margin-top:18px}
+.book{position:relative;text-align:left}
+.book .cv{position:relative;display:block;width:100%;aspect-ratio:210/275;background:#ddd center/cover no-repeat;box-shadow:0 14px 28px -12px rgba(0,0,0,.4);overflow:hidden;transition:transform .2s}
+.book .cv:hover{transform:translateY(-3px)}
+.book .cv b{position:absolute;left:0;right:0;top:7%;text-align:center;font-family:var(--serif);font-weight:500;font-size:clamp(18px,2.4vw,28px);letter-spacing:-.01em;text-transform:uppercase;color:#111;text-shadow:0 0 10px rgba(255,255,255,.5)}
+.book .meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px;color:var(--muted)}
+.book .meta strong{font-family:var(--serif);font-weight:500;font-size:15px;color:var(--ink)}
+.book .acts{display:flex;gap:2px}
+.book .acts button{width:26px;height:26px;display:grid;place-items:center;border-radius:2px}
+.book .acts button:hover{background:#0000000f}
+.book .acts svg{width:14px;height:14px}
+.book .tag{position:absolute;bottom:8px;left:8px;background:var(--ink);color:#fff;font-size:9px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;padding:3px 6px}
+.make-actions{margin-top:26px}
+.ai-box{display:grid;gap:8px;margin-top:10px}
+.ai-box textarea{width:100%;min-height:70px;resize:vertical;border:1px solid var(--line2);background:#fff;padding:8px 10px;font-size:12.5px;line-height:1.4}
+.ai-box textarea:focus,.ai-box input:focus{outline:none;border-color:var(--ink)}
+.ai-box input{width:100%;height:32px;border:1px solid var(--line2);background:#fff;padding:0 10px;font-size:12.5px}
+.ai-box .row{align-items:center}
+.ai-box .cost{font-size:11.5px;color:var(--muted);margin-left:auto}
+.btn-ai{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-ai:hover{background:#a80016;border-color:#a80016}
+.btn .spinner.dark{border-color:#0002;border-top-color:var(--ink)}
+
 /* ============ COMPOSING ============ */
 #make{min-height:100%;display:grid;place-items:center;padding:40px 16px}
 .make{width:min(980px,100%);text-align:center}
@@ -230,6 +268,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke
   .rail{display:none}
 }
 @media (max-width:560px){
+  .shelf-grid{grid-template-columns:repeat(2,1fr);gap:14px}
   .city-form{flex-direction:column}
   .vibes{grid-template-columns:1fr}
   .bar-c .group:first-child{display:none}

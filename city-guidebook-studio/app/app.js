@@ -1,6 +1,8 @@
 // Guidebook Studio — client. No framework: the book JSON is the single source
 // of truth; the server renders it; the editor writes edits back by JSON path.
 
+import { library, newId } from "./library.js";
+
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s = "") => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -82,15 +84,33 @@ async function renderOffscreen(book, theme) {
 // ---------- app state ----------
 
 let catalog;
+let ai = { enabled: false };
 let pending = null; // book handed from the composing screen to the editor
+let genRequest = null; // { city, brief, images, theme } for #/new
 const ui = { theme: store.get("gbs:theme") || "couture" };
+
+// Shrink AI/uploaded images before storing: JPEG, longest side 1600px (~190dpi on the page).
+async function toJpeg(src, max = 1600, q = 0.86) {
+  const img = new Image();
+  img.decoding = "async";
+  img.src = src;
+  await img.decode();
+  const w = img.naturalWidth || 1200, h = img.naturalHeight || 1600, k = Math.min(1, max / Math.max(w, h));
+  const c = Object.assign(document.createElement("canvas"), { width: Math.round(w * k), height: Math.round(h * k) });
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", q);
+}
+const money = (n) => (n >= 0.01 ? `$${n.toFixed(2)}` : n > 0 ? "< $0.01" : "$0.00");
+const isSample = (id) => catalog.books.some((b) => b.id === id);
 
 // ---------- router ----------
 
 async function route() {
   const h = location.hash.replace(/^#\/?/, "");
   const [view, id] = h.split("/");
+  if (genAbort && view !== "new") { genAbort.abort(); genAbort = null; }
   $$(".view").forEach((v) => (v.hidden = true));
+  if (view === "new") return showGenerate();
   if (view === "make" && id) return showMake(id);
   if (view === "edit" && id) return showEditor(id);
   showHome();
@@ -103,6 +123,9 @@ async function showHome() {
   $("#home").hidden = false;
   document.title = "Guidebook Studio";
   $("#cityList").innerHTML = catalog.books.map((b) => `<option value="${esc(b.city)}">`).join("");
+  $("#aiOpts").hidden = !ai.enabled;
+  $("#aiModels").textContent = ai.enabled ? `Writing by ${ai.text} · photography by ${ai.image}, via OpenRouter.` : "";
+  if (!ai.enabled) $("#cityInput").value ||= "Lisbon";
   const vibes = $("#vibes");
   vibes.innerHTML = Object.entries(catalog.themes).map(([k, t]) => `
     <button class="vibe" role="radio" aria-checked="${k === ui.theme}" data-theme="${k}">
@@ -116,6 +139,7 @@ async function showHome() {
     paintCovers();
   };
   paintCovers();
+  renderShelf();
 }
 
 async function paintCovers() {
@@ -136,43 +160,86 @@ async function paintCovers() {
   }));
 }
 
+const SHELF_ICON = {
+  copy: '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12"/><path d="M16 8V4H4v12h4"/></svg>',
+  json: '<svg viewBox="0 0 24 24"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></svg>',
+  del: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+};
+async function renderShelf() {
+  const recs = await library.list();
+  $("#shelf").hidden = !recs.length;
+  $("#shelfCount").textContent = recs.length ? `· ${recs.length}` : "";
+  $("#shelfGrid").innerHTML = recs.map((r) => {
+    const cov = r.book.pages.find((p) => p.type === "cover")?.image || {};
+    const bg = cov.src ? `url('${String(cov.src).replace(/'/g, "%27")}')` : `url('/api/scene/${cov.scene || "rooftops"}.svg')`;
+    return `<article class="book" data-id="${esc(r.id)}">
+      <a class="cv" href="#/edit/${esc(r.id)}" style="background-image:${bg}" aria-label="Open ${esc(r.city)}">${r.ai ? '<span class="tag">AI</span>' : ""}<b>${esc(r.city)}</b></a>
+      <div class="meta"><div><strong>${esc(r.city)}</strong><br>${new Date(r.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}${r.cost ? ` · ${money(r.cost)}` : ""}</div>
+        <div class="acts"><button data-act="copy" title="Duplicate" aria-label="Duplicate">${SHELF_ICON.copy}</button><button data-act="json" title="Download JSON" aria-label="Download JSON">${SHELF_ICON.json}</button><button data-act="del" title="Delete" aria-label="Delete">${SHELF_ICON.del}</button></div></div>
+    </article>`;
+  }).join("");
+}
+$("#shelfGrid").addEventListener("click", async (e) => {
+  const act = e.target.closest("[data-act]")?.dataset.act; if (!act) return;
+  const id = e.target.closest(".book").dataset.id, rec = await library.get(id);
+  if (act === "copy") { await library.put(newId(rec.city), structuredClone(rec.book), { ai: rec.ai }); toast(`Duplicated ${rec.city}.`); }
+  if (act === "json") download(new Blob([JSON.stringify(rec.book, null, 2)], { type: "application/json" }), `${slug(rec.city)}-guidebook.json`);
+  if (act === "del") {
+    if (!confirm(`Delete your ${rec.city} guidebook from this browser?`)) return;
+    await library.remove(id);
+    toast(`Deleted ${rec.city}.`, { action: "Undo", onAction: async () => { await library.put(id, rec.book, rec); renderShelf(); } });
+  }
+  renderShelf();
+});
+$("#importInput").addEventListener("change", async (e) => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  try {
+    const book = JSON.parse(await f.text());
+    if (!book?.meta?.city || !Array.isArray(book.pages)) throw new Error("not a guidebook");
+    await api.render(book); // validates on the server
+    const id = newId(book.meta.city);
+    await library.put(id, book);
+    location.hash = `#/edit/${id}`;
+  } catch (err) { toast("That file isn't a guidebook JSON: " + err.message, { error: true, ms: 6000 }); }
+});
+
 $("#cityForm").addEventListener("submit", (e) => {
   e.preventDefault();
-  const q = $("#cityInput").value.trim().toLowerCase();
+  const city = $("#cityInput").value.trim(), q = city.toLowerCase();
   const note = $("#cityNote");
-  if (!q) { note.textContent = "Type a city to begin."; return; }
+  if (!city) { note.textContent = "Type a city to begin."; $("#cityInput").focus(); return; }
   const hit = catalog.books.find((b) => b.city.toLowerCase() === q || b.id === q);
+  if (ai.enabled) {
+    genRequest = { city, brief: $("#briefInput").value.trim(), images: $('input[name="imgmode"]:checked').value, theme: ui.theme };
+    location.hash = "#/new";
+    return;
+  }
   if (hit) { location.hash = `#/make/${hit.id}`; return; }
   const first = catalog.books[0];
-  note.innerHTML = `<b>${esc($("#cityInput").value.trim())}</b> isn't in the library yet. Generating any city is the next milestone (the AI research pipeline). ${first ? `<button type="button" id="trySample">Open ${esc(first.city)} instead</button>` : ""}`;
+  note.innerHTML = `AI generation is off. Add your OpenRouter key as <b>OPENROUTER_API_KEY</b> in <b>.env</b> and restart the server to create <b>${esc(city)}</b>. ${first ? `<button type="button" id="trySample">Open ${esc(first.city)} instead</button>` : ""}`;
   $("#trySample")?.addEventListener("click", () => (location.hash = `#/make/${first.id}`));
 });
 
 // ============ COMPOSING ============
 
+// Sample issue: assemble from the server copy (or your saved draft).
 async function showMake(id) {
   $("#make").hidden = false;
   const bar = $("#makeBar"), step = $("#makeStep"), grid = $("#makeGrid");
-  grid.innerHTML = ""; bar.style.width = "0";
+  grid.innerHTML = ""; bar.style.width = "0"; $("#makeCost").textContent = ""; $(".make-actions").hidden = true;
   const meta = catalog.books.find((b) => b.id === id);
   $("#makeTitle").textContent = meta?.city || id;
   document.title = `Composing ${meta?.city || id} · Guidebook Studio`;
   try {
     step.textContent = "Gathering neighbourhoods, tables and sights…"; bar.style.width = "12%";
-    const draft = store.get(`gbs:book:${id}`);
+    const draft = await library.get(id);
     const book = draft?.book || (await api.book(id));
     book.meta.theme = ui.theme;
     await sleep(350);
     step.textContent = "Setting type and placing images…"; bar.style.width = "38%";
     const r = await renderOffscreen(book, ui.theme);
-    grid.innerHTML = r.pages.map((p, i) => `<figure><div class="tbox"><div class="thumb"></div></div><figcaption>${i === 0 ? "Cover" : String(i + 1).padStart(2, "0")}</figcaption></figure>`).join("");
-    const figs = $$("figure", grid);
-    for (const [i, f] of figs.entries()) {
-      paintThumb($(".thumb", f), r.css, r.pages[i].html);
-      f.classList.add("in");
-      bar.style.width = `${38 + (52 * (i + 1)) / figs.length}%`;
-      await sleep(90);
-    }
+    await revealThumbs(r, (f) => (bar.style.width = `${38 + 52 * f}%`));
     step.textContent = r.overflow.length ? `Checked fit: ${r.overflow.length} frame(s) need attention.` : "Checked fit: every frame sits cleanly.";
     bar.style.width = "100%";
     pending = { id, book, restored: !!draft };
@@ -183,11 +250,113 @@ async function showMake(id) {
   }
 }
 
+async function revealThumbs(r, onProgress) {
+  const grid = $("#makeGrid");
+  grid.innerHTML = r.pages.map((p, i) => `<figure><div class="tbox"><div class="thumb"></div></div><figcaption>${i === 0 ? "Cover" : String(i + 1).padStart(2, "0")}</figcaption></figure>`).join("");
+  const figs = $$("figure", grid);
+  for (const [i, f] of figs.entries()) {
+    paintThumb($(".thumb", f), r.css, r.pages[i].html);
+    f.classList.add("in");
+    onProgress?.((i + 1) / figs.length);
+    await sleep(70);
+  }
+}
+
+// AI issue: stream writing + photography from the server, saving as we go.
+let genAbort = null;
+async function showGenerate() {
+  const req = genRequest; genRequest = null;
+  if (!req) { location.hash = "#/"; return; }
+  $("#make").hidden = false;
+  const bar = $("#makeBar"), step = $("#makeStep"), grid = $("#makeGrid"), costEl = $("#makeCost");
+  grid.innerHTML = ""; bar.style.width = "2%"; costEl.textContent = ""; $(".make-actions").hidden = false;
+  $("#makeTitle").textContent = req.city;
+  document.title = `Writing ${req.city} · Guidebook Studio`;
+  const ac = (genAbort = new AbortController());
+  let id = null, book = null, spent = 0, total = 0, got = 0, failed = 0, saveT;
+  const save = () => { clearTimeout(saveT); saveT = setTimeout(() => book && library.put(id, book, { ai: true, cost: spent }), 300); };
+  $("#makeCancel").textContent = "Cancel";
+  $("#makeCancel").onclick = () => {
+    ac.abort();
+    if (book) { library.put(id, book, { ai: true, cost: spent }).then(() => (location.hash = `#/edit/${id}`)); }
+    else location.hash = "#/";
+  };
+  // the writing step has no progress signal: ease towards 35% while we wait
+  let creep = 2;
+  const creepT = setInterval(() => { if (!book) { creep += (35 - creep) * 0.03; bar.style.width = creep + "%"; } }, 400);
+  const strip = document.createElement("div");
+  try {
+    const r = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(req), signal: ac.signal });
+    if (!r.ok) throw new Error(await r.text());
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl); buf = buf.slice(nl + 1);
+        if (!line.trim()) continue;
+        const ev = JSON.parse(line);
+        if (ev.cost) { spent += ev.step === "done" ? 0 : ev.cost; }
+        if (ev.step === "write") step.textContent = ev.message;
+        if (ev.step === "error") throw new Error(ev.message);
+        if (ev.step === "book") {
+          book = ev.book; id = newId(book.meta.city);
+          $("#makeTitle").textContent = book.meta.city;
+          await library.put(id, book, { ai: true, cost: spent });
+          step.textContent = "Setting type…"; bar.style.width = "38%";
+          const rr = await renderOffscreen(book, book.meta.theme);
+          await revealThumbs(rr);
+          grid.insertAdjacentElement("afterend", strip);
+          strip.className = "make-grid";
+          if (!total) bar.style.width = "95%";
+        }
+        if (ev.step === "images") { total = ev.total; step.textContent = ev.message; }
+        if (ev.step === "image" || ev.step === "image-failed") {
+          got++;
+          if (ev.step === "image") {
+            const src = await toJpeg(ev.src).catch(() => ev.src);
+            const cur = getPath(book, ev.path) || {};
+            setPath(book, ev.path, { ...cur, src, prompt: ev.prompt || cur.prompt });
+            strip.insertAdjacentHTML("beforeend", `<figure class="in"><div class="tbox" style="background:url('${src}') center/cover"></div></figure>`);
+          } else failed++;
+          step.textContent = `Photographs: ${got - failed} of ${total}${failed ? ` (${failed} kept as illustrations)` : ""}`;
+          bar.style.width = `${40 + (55 * got) / total}%`;
+          save();
+        }
+        costEl.textContent = spent ? `Spent so far: ${money(spent)}` : "";
+        if (ev.step === "done") {
+          spent = ev.cost || spent;
+          costEl.textContent = `This issue cost ${money(spent)} on OpenRouter.`;
+        }
+      }
+    }
+    if (!book) throw new Error("The model didn't return a guidebook.");
+    clearInterval(creepT);
+    await library.put(id, book, { ai: true, cost: spent });
+    bar.style.width = "100%";
+    step.textContent = failed ? `Done. ${failed} photo(s) failed and kept their illustrations; regenerate them from the editor.` : "Done. Opening the editor…";
+    pending = { id, book };
+    await sleep(failed ? 1800 : 900);
+    if (location.hash === "#/new") location.hash = `#/edit/${id}`;
+  } catch (e) {
+    clearInterval(creepT);
+    if (ac.signal.aborted) return;
+    step.textContent = "Couldn't finish: " + e.message;
+    $("#makeCancel").textContent = book ? "Open what we have" : "Back";
+    $("#makeCancel").onclick = () => (location.hash = book ? `#/edit/${id}` : "#/");
+  } finally {
+    if (genAbort === ac) genAbort = null;
+  }
+}
+
 // ============ EDITOR ============
 
 const ed = {
   id: null, book: null, history: [], future: [], sel: 0, img: null, view: store.get("gbs:view") || "spreads",
-  zoom: null, read: 0, lastPath: null, lastAt: 0, dirty: false, retoc: false, css: "",
+  zoom: null, read: 0, lastPath: null, lastAt: 0, dirty: false, retoc: false, css: "", rec: null,
 };
 let front = $("#frameA"), back = $("#frameB");
 back.classList.add("back");
@@ -196,15 +365,16 @@ async function showEditor(id) {
   $("#edit").hidden = false;
   if (ed.id !== id || !ed.book) {
     let book, restored = false;
+    const rec = await library.get(id);
     if (pending?.id === id) ({ book, restored } = pending);
     else {
-      const draft = store.get(`gbs:book:${id}`);
-      book = draft?.book || (await api.book(id).catch(() => null));
-      restored = !!draft;
+      book = rec?.book || (isSample(id) ? await api.book(id).catch(() => null) : null);
+      restored = !!rec && isSample(id);
     }
     pending = null;
-    if (!book) { toast("That guidebook doesn't exist.", { error: true }); location.hash = "#/"; return; }
-    Object.assign(ed, { id, book, history: [], future: [], sel: 0, img: null, read: 0 });
+    if (!book) { toast("That guidebook isn't saved in this browser.", { error: true }); location.hash = "#/"; return; }
+    Object.assign(ed, { id, book, history: [], future: [], sel: 0, img: null, read: 0, rec });
+    if (!rec) await library.put(id, book);
     if (restored) toast("Picked up your saved draft.", { action: "Start over", onAction: revertToSample, ms: 6000 });
   }
   setView(ed.view, false);
@@ -227,7 +397,7 @@ function updateChrome() {
 function commit(mutate, { path, rerender: rr = true } = {}) {
   const now = Date.now();
   const coalesce = path && path === ed.lastPath && now - ed.lastAt < 1200;
-  if (!coalesce) { ed.history.push(JSON.stringify(ed.book)); if (ed.history.length > 150) ed.history.shift(); }
+  if (!coalesce) { ed.history.push(JSON.stringify(ed.book)); if (ed.history.length > 60) ed.history.shift(); }
   ed.lastPath = path || null; ed.lastAt = now;
   ed.future = [];
   mutate(ed.book);
@@ -249,22 +419,41 @@ function redo() {
   ed.lastPath = null; markDirty(); updateChrome(); rerender();
 }
 
-let saveTimer, warnedQuota = false;
+let saveTimer;
+async function saveNow() {
+  clearTimeout(saveTimer);
+  const s = $("#saveState");
+  try {
+    ed.rec = await library.put(ed.id, ed.book, ed.rec?.ai ? { ai: true } : {});
+    ed.dirty = false;
+    s.classList.remove("dirty");
+    s.textContent = `Saved ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+    return true;
+  } catch {
+    s.classList.add("dirty"); s.textContent = "Not saved";
+    toast("This browser couldn't save the guidebook. Download the JSON to keep a copy.", { error: true, ms: 7000 });
+    return false;
+  }
+}
 function markDirty() {
   ed.dirty = true;
   const s = $("#saveState"); s.textContent = "Saving…"; s.classList.add("dirty");
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    const ok = store.set(`gbs:book:${ed.id}`, { book: ed.book, at: Date.now() });
-    s.classList.toggle("dirty", !ok);
-    s.textContent = ok ? "Saved" : "Not saved";
-    if (!ok && !warnedQuota) { warnedQuota = true; toast("This browser couldn't store the draft (large images?). Use JSON to keep a copy.", { error: true, ms: 7000 }); }
-  }, 600);
+  saveTimer = setTimeout(saveNow, 700);
+}
+$("#saveBtn").onclick = async () => { if (await saveNow()) toast("Saved to this browser. Find it under “Your guidebooks” on the start page."); };
+addEventListener("beforeunload", (e) => { if (ed.dirty) { saveNow(); e.preventDefault(); } });
+
+async function saveCopy() {
+  const id = newId(ed.book.meta.city);
+  await library.put(id, structuredClone(ed.book), { ai: ed.rec?.ai });
+  toast(`Saved a copy of ${ed.book.meta.city}. You're now editing the copy.`);
+  ed.id = null; location.hash = `#/edit/${id}`;
 }
 
 async function revertToSample() {
+  if (!isSample(ed.id)) return;
   if (!confirm("Discard your edits and reload the original sample?")) return;
-  store.del(`gbs:book:${ed.id}`);
   const fresh = await api.book(ed.id);
   commit((b) => Object.assign(b, fresh));
   toast("Back to the original sample. Undo to restore your edits.");
@@ -596,12 +785,18 @@ function renderPageTab() {
           ${img.src ? '<button class="btn btn-sm" data-imgact="clear">Use illustration</button>' : ""}
         </div>
         <div class="urlrow"><input id="imgUrl" placeholder="…or paste an image URL" value="${esc(img.src && !String(img.src).startsWith("data:") ? img.src : "")}"><button class="btn btn-sm" data-imgact="url">Use</button></div>
+        ${ai.enabled ? `<div class="ai-box"><h4 style="margin:14px 0 0">Generate a photo</h4>
+          <textarea id="imgPrompt" placeholder="Describe the shot">${esc(img.prompt || defaultPrompt(p, sel))}</textarea>
+          <div class="row"><button class="btn btn-sm btn-ai" data-imgact="gen">Generate photo</button><span class="cost">${esc(aspectFor(p, sel))} · ≈ $0.02</span></div></div>` : ""}
         <h4 style="margin-top:14px">Illustrations</h4>
         <div class="scenes">${catalog.scenes.map((s) => `<button data-scene="${s}" aria-pressed="${!img.src && img.scene === s}" title="${s}" style="background-image:url('/api/scene/${s}.svg')"></button>`).join("")}</div>
         ${img.src ? `<label class="field" style="margin-top:12px"><span>Photo credit</span><input id="imgCredit" value="${esc(img.credit || "")}" placeholder="Photographer / licence"></label>` : ""}
         <p class="tip" style="margin-top:10px">Drag the image on the page to reframe it.</p>`
         : `<p class="tip" style="margin-top:10px">Pick an image above, or click one on the page, to replace or reframe it.</p>`}
     </div>` : ""}
+    ${ai.enabled ? `<div class="sect"><h4>Rewrite with AI</h4><div class="ai-box" style="margin-top:0">
+      <input id="rewriteInput" placeholder="e.g. punchier, add a vegetarian option, more local">
+      <div class="row"><button class="btn btn-sm btn-ai" data-pact="rewrite">Rewrite this page</button><span class="cost">≈ $0.001</span></div></div></div>` : ""}
     <div class="sect"><h4>Arrange</h4>
       <div class="row">
         <button class="btn btn-sm" data-pact="up" ${ed.sel === 0 ? "disabled" : ""}>Move up</button>
@@ -619,11 +814,13 @@ $("#tabPage").addEventListener("click", (e) => {
   const t = e.target.closest("button"); if (!t) return;
   const p = ed.book.pages[ed.sel];
   if (t.dataset.layout) return commit((b) => (b.pages[ed.sel].layout = t.dataset.layout));
+  if (t.dataset.pact === "rewrite") return aiRewrite(t);
   if (t.dataset.pact) return pageAction(t.dataset.pact, ed.sel);
   if (t.dataset.pick) { ed.img = t.dataset.pick; markSelection(); renderPageTab(); $(`[data-img="${ed.img}"]`, doc())?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
   const path = ed.img; if (!path) return;
   if (t.dataset.scene) return commit((b) => setPath(b, path, { scene: t.dataset.scene }));
   const act = t.dataset.imgact;
+  if (act === "gen") return aiImage(t, path);
   if (act === "upload") $("#fileInput").click();
   if (act === "reset") commit((b) => { const o = { ...getPath(b, path) }; delete o.pos; setPath(b, path, o); });
   if (act === "clear") commit((b) => setPath(b, path, { scene: getPath(b, path).scene || "rooftops" }));
@@ -634,6 +831,54 @@ $("#tabPage").addEventListener("click", (e) => {
   }
   void p;
 });
+// ---- AI actions in the inspector ----
+
+function aspectFor(p, key) {
+  const k = key.split(".").slice(2).join(".");
+  if (p.type === "eat") return "1:1";
+  if (p.type === "glance") return "16:9";
+  if (p.type === "contents") return "9:16";
+  if (p.type === "letter") return "2:3";
+  if (p.type === "sight") return "4:3";
+  if (p.type === "gems") return k.startsWith("gems.0") ? "2:3" : "4:3";
+  return "3:4";
+}
+function defaultPrompt(p, key) {
+  const k = key.split(".").slice(2), item = k.length > 2 ? p[k[0]]?.[k[1]] : null;
+  return `${item?.name || p.heading || TYPE_NAMES[p.type]}, ${ed.book.meta.city}${item?.note ? ". " + item.note : ""}`;
+}
+async function busy(btn, label, fn) {
+  const old = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = `<i class="spinner"></i>${label}`;
+  try { return await fn(); }
+  catch (e) { toast(e.message, { error: true, ms: 7000 }); }
+  finally { btn.disabled = false; btn.innerHTML = old; }
+}
+async function postJSON(url, body) {
+  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error((await r.text()) || r.statusText);
+  return r.json();
+}
+function aiImage(btn, path) {
+  const prompt = $("#imgPrompt").value.trim();
+  if (!prompt) return toast("Describe the photo first.", { error: true });
+  const p = ed.book.pages[ed.sel], aspect = aspectFor(p, path);
+  return busy(btn, "Shooting…", async () => {
+    const r = await postJSON("/api/image", { prompt, aspect, city: ed.book.meta.city });
+    const src = await toJpeg(r.src).catch(() => r.src);
+    commit((b) => setPath(b, path, { scene: getPath(b, path)?.scene, src, prompt, credit: "AI-generated" }));
+    toast(`Photo placed${r.cost ? ` (${money(r.cost)})` : ""}. Drag it on the page to reframe.`);
+  });
+}
+function aiRewrite(btn) {
+  const i = ed.sel, page = ed.book.pages[i], instruction = $("#rewriteInput").value.trim();
+  return busy(btn, "Rewriting…", async () => {
+    const r = await postJSON("/api/rewrite", { city: ed.book.meta.city, page, instruction });
+    commit((b) => (b.pages[i] = r.page));
+    toast("Page rewritten. Undo to get the old version back.", { action: "Undo", onAction: undo, ms: 6000 });
+  });
+}
+
 $("#tabPage").addEventListener("change", (e) => {
   if (e.target.id === "imgCredit" && ed.img) commit((b) => (getPath(b, ed.img).credit = e.target.value), { rerender: false });
 });
@@ -669,15 +914,21 @@ function renderBookTab() {
     <div class="sect"><h4>Masthead & details</h4>
       ${META_FIELDS.map(([k, l]) => `<label class="field"><span>${l}</span><input data-meta="${k}" value="${esc(m[k] || "")}"></label>`).join("")}
     </div>
-    <div class="sect"><h4>Draft</h4>
-      <p class="tip">Edits save to this browser automatically. Download JSON to keep or share a copy.</p>
-      <div class="row" style="margin-top:10px"><button class="btn btn-sm" id="revertBtn">Start over from sample</button></div>
+    <div class="sect"><h4>Saved in this browser</h4>
+      <p class="tip">Every edit autosaves to this browser's local storage. Your guidebooks are listed on the start page. Download the JSON to keep a copy elsewhere.${ed.rec?.cost ? ` Generating this issue cost ${money(ed.rec.cost)}.` : ""}</p>
+      <div class="row" style="margin-top:10px">
+        <button class="btn btn-sm" id="saveNowBtn">Save now</button>
+        <button class="btn btn-sm" id="copyBtn">Save a copy</button>
+        ${isSample(ed.id) ? '<button class="btn btn-sm" id="revertBtn">Start over from sample</button>' : ""}
+      </div>
     </div>`;
 }
 $("#tabBook").addEventListener("click", (e) => {
   const th = e.target.closest("[data-theme]");
   if (th) { commit((b) => (b.meta.theme = th.dataset.theme)); ui.theme = th.dataset.theme; store.set("gbs:theme", ui.theme); return; }
   if (e.target.closest("#revertBtn")) revertToSample();
+  if (e.target.closest("#saveNowBtn")) saveNow().then((ok) => ok && toast("Saved to this browser."));
+  if (e.target.closest("#copyBtn")) saveCopy();
 });
 let metaTimer;
 $("#tabBook").addEventListener("input", (e) => {
@@ -778,7 +1029,7 @@ function handleKeys(e) {
   const mod = e.metaKey || e.ctrlKey;
   if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); }
   else if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); }
-  else if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); markDirty(); toast("Saved to this browser."); }
+  else if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); saveNow().then((ok) => ok && toast("Saved to this browser.")); }
   else if (ed.view === "read" && !e.target.closest?.("[data-edit],input")) {
     if (e.key === "ArrowRight") showSpread(ed.read + 1, 1);
     if (e.key === "ArrowLeft") showSpread(ed.read - 1, -1);
@@ -792,7 +1043,11 @@ $("#panelToggle").onclick = () => $("#inspector").classList.toggle("open");
 // ---------- boot ----------
 
 (async function boot() {
-  try { catalog = await api.catalog(); }
+  try {
+    catalog = await api.catalog();
+    ai = await fetch("/api/ai/status").then((r) => r.json()).catch(() => ({ enabled: false }));
+    await library.migrate();
+  }
   catch { document.body.innerHTML = "<p style='padding:40px'>Couldn't reach the studio server. Is <code>npm start</code> running?</p>"; return; }
   addEventListener("hashchange", route);
   route();

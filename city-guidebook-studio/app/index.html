@@ -26,10 +26,21 @@
 
       <form id="cityForm" class="city-form" autocomplete="off">
         <label for="cityInput" class="sr">City</label>
-        <input id="cityInput" list="cityList" placeholder="Type a city…" value="Lisbon" spellcheck="false">
+        <input id="cityInput" list="cityList" placeholder="Type any city…" value="" spellcheck="false" maxlength="80">
         <datalist id="cityList"></datalist>
-        <button class="btn btn-ink btn-lg" type="submit">Create guidebook <span aria-hidden="true">→</span></button>
+        <button class="btn btn-ink btn-lg" type="submit" id="createBtn">Create guidebook <span aria-hidden="true">→</span></button>
       </form>
+      <div id="aiOpts" class="ai-opts" hidden>
+        <label class="brief"><span>Focus <em class="muted">(optional)</em></span>
+          <input id="briefInput" placeholder="e.g. food and design, travelling with kids, on a budget" maxlength="200"></label>
+        <div class="photo-mode" role="radiogroup" aria-label="Photography">
+          <span>Photography</span>
+          <label><input type="radio" name="imgmode" value="key" checked> Key photos <em>7 · ≈ $0.15</em></label>
+          <label><input type="radio" name="imgmode" value="all"> Every image <em>22 · ≈ $0.45</em></label>
+          <label><input type="radio" name="imgmode" value="none"> Illustrations <em>≈ $0.01</em></label>
+        </div>
+        <p class="muted small" id="aiModels"></p>
+      </div>
       <p id="cityNote" class="note" role="status"></p>
 
       <div class="vibes-head"><span class="eyebrow">Choose a look</span><span class="muted small">You can switch any time</span></div>
@@ -44,6 +55,17 @@
       </div>
     </div>
   </div>
+
+  <section class="shelf" id="shelf" hidden>
+    <div class="shelf-head">
+      <h2>Your guidebooks <span class="muted" id="shelfCount"></span></h2>
+      <div class="row">
+        <label class="btn btn-sm" title="Open a guidebook saved as JSON">Import JSON<input type="file" id="importInput" accept="application/json,.json" hidden></label>
+      </div>
+    </div>
+    <p class="muted small">Saved in this browser. Download the JSON from the editor to keep a copy elsewhere.</p>
+    <div id="shelfGrid" class="shelf-grid"></div>
+  </section>
 
   <section class="steps">
     <div><b>01</b><h3>Type a city</h3><p>Research, curation and copy arrive as structured content, never as loose HTML.</p></div>
@@ -60,7 +82,9 @@
     <h2 id="makeTitle">Lisbon</h2>
     <div class="progress"><i id="makeBar"></i></div>
     <p id="makeStep" class="muted" role="status">Gathering content…</p>
+    <p id="makeCost" class="muted small"></p>
     <div id="makeGrid" class="make-grid"></div>
+    <div class="make-actions"><button class="btn" id="makeCancel">Cancel</button></div>
   </div>
 </section>
 
@@ -89,6 +113,7 @@
     </div>
     <div class="bar-r">
       <span id="saveState" class="save muted">Saved</span>
+      <button class="btn btn-ghost" id="saveBtn" title="Save to this browser (⌘S)">Save</button>
       <button class="btn btn-ghost" id="jsonBtn" title="Download the book as JSON">JSON</button>
       <button class="btn btn-ink" id="pdfBtn"><svg viewBox="0 0 24 24" class="i"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></svg><span>Export PDF</span></button>
       <button class="icon only-narrow" id="panelToggle" aria-label="Toggle inspector"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM15 5v14"/></svg></button>
