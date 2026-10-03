@@ -1,0 +1,22 @@
+{
+  "name": "city-guidebook-studio",
+  "version": "1.0.0",
+  "description": "Type a city, get a magazine-grade guidebook. Edit it, export a print-ready PDF.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "build": "node scripts/build.js",
+    "pdf": "node scripts/pdf.js",
+    "book": "node scripts/build.js && node scripts/pdf.js dist/lisbon.html --png"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "jsonrepair": "^3.15.0",
+    "playwright": "1.56.1",
+    "qrcode": "^1.5.4"
+  },
+  "type": "module",
+  "private": true
+}

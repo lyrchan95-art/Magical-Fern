@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guidebook Studio</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23111'/%3E%3Ctext x='16' y='23' font-family='Georgia' font-size='20' fill='%23fff' text-anchor='middle'%3EG%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/app/app.css">
+</head>
+<body>
+
+<!-- ============ HOME ============ -->
+<section id="home" class="view" hidden>
+  <nav class="topnav">
+    <a class="brand" href="#/"><em>Guidebook</em><span>Studio</span></a>
+    <div class="topnav-r">
+      <a class="link" href="#/edit/lisbon">Open the sample issue</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow">The city guidebook, art-directed in minutes</div>
+      <h1>Every city deserves a <i>cover story.</i></h1>
+      <p class="lede">Type a city. Get a magazine-grade guidebook with neighbourhood features, a curated table list and a weekend itinerary. Refine every word and image, then export a print-ready PDF.</p>
+
+      <form id="cityForm" class="city-form" autocomplete="off">
+        <label for="cityInput" class="sr">City</label>
+        <input id="cityInput" list="cityList" placeholder="Type any city…" value="" spellcheck="false" maxlength="80">
+        <datalist id="cityList"></datalist>
+        <button class="btn btn-ink btn-lg" type="submit" id="createBtn">Create guidebook <span aria-hidden="true">→</span></button>
+      </form>
+      <div id="aiOpts" class="ai-opts" hidden>
+        <label class="brief"><span>Focus <em class="muted">(optional)</em></span>
+          <input id="briefInput" placeholder="e.g. food and design, travelling with kids, on a budget" maxlength="200"></label>
+        <div class="photo-mode" role="radiogroup" aria-label="Image style">
+          <span>Images</span>
+          <label><input type="radio" name="imgstyle" value="photo" checked> Photographs</label>
+          <label><input type="radio" name="imgstyle" value="illustration"> Illustrations</label>
+        </div>
+        <div class="photo-mode" role="radiogroup" aria-label="How many images">
+          <span>Generate</span>
+          <label><input type="radio" name="imgmode" value="all" checked> Every image <em>22 · ≈ $0.45</em></label>
+          <label><input type="radio" name="imgmode" value="key" > Key images <em>7 · ≈ $0.15</em></label>
+          <label><input type="radio" name="imgmode" value="none"> Later, in the editor <em>≈ $0.01</em></label>
+        </div>
+        <p class="muted small" id="aiModels"></p>
+      </div>
+      <p id="cityNote" class="note" role="status"></p>
+
+      <div class="vibes-head"><span class="eyebrow">Choose a look</span><span class="muted small">You can switch any time</span></div>
+      <div id="vibes" class="vibes" role="radiogroup" aria-label="Theme"></div>
+    </div>
+
+    <div class="hero-art" aria-hidden="true">
+      <div class="cover-stack">
+        <div class="cover-card back2"><div class="mini" data-mini="2"></div></div>
+        <div class="cover-card back1"><div class="mini" data-mini="1"></div></div>
+        <div class="cover-card front"><div class="mini" data-mini="0"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="shelf" id="shelf" hidden>
+    <div class="shelf-head">
+      <h2>Your guidebooks <span class="muted" id="shelfCount"></span></h2>
+      <div class="row">
+        <label class="btn btn-sm" title="Open a guidebook saved as JSON">Import JSON<input type="file" id="importInput" accept="application/json,.json" hidden></label>
+      </div>
+    </div>
+    <p class="muted small">Saved in this browser. Download the JSON from the editor to keep a copy elsewhere.</p>
+    <div id="shelfGrid" class="shelf-grid"></div>
+  </section>
+
+  <section class="steps">
+    <div><b>01</b><h3>Type a city</h3><p>Research, curation and copy arrive as structured content, never as loose HTML.</p></div>
+    <div><b>02</b><h3>Refine the issue</h3><p>Edit text in place, swap and reframe images, reorder pages, change layouts and themes.</p></div>
+    <div><b>03</b><h3>Export to print</h3><p>Vector type, embedded fonts and the same render path as the screen. What you see is what prints.</p></div>
+  </section>
+  <footer class="foot">Prototype · Sample content flagged “verify before travel” · Fonts under the SIL Open Font License</footer>
+</section>
+
+<!-- ============ COMPOSING ============ -->
+<section id="make" class="view" hidden>
+  <div class="make">
+    <div class="eyebrow">Composing your issue</div>
+    <h2 id="makeTitle">Lisbon</h2>
+    <div class="progress"><i id="makeBar"></i></div>
+    <p id="makeStep" class="muted" role="status">Gathering content…</p>
+    <p id="makeCost" class="muted small"></p>
+    <div id="makeGrid" class="make-grid"></div>
+    <div class="make-actions"><button class="btn" id="makeCancel">Cancel</button></div>
+  </div>
+</section>
+
+<!-- ============ EDITOR ============ -->
+<section id="edit" class="view" hidden>
+  <header class="bar">
+    <div class="bar-l">
+      <a class="brand sm" href="#/" title="Back to start"><em>Guidebook</em><span>Studio</span></a>
+      <div class="doc-title"><b id="docCity">Lisbon</b><span id="docIssue" class="muted"></span></div>
+    </div>
+    <div class="bar-c">
+      <div class="group">
+        <button class="icon" id="undoBtn" title="Undo (⌘Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+        <button class="icon" id="redoBtn" title="Redo (⇧⌘Z)" aria-label="Redo"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+      </div>
+      <div class="seg" role="tablist" aria-label="View">
+        <button data-view="spreads" class="on">Spreads</button>
+        <button data-view="pages">Pages</button>
+        <button data-view="read">Read</button>
+      </div>
+      <div class="group zoom">
+        <button class="icon" id="zoomOut" aria-label="Zoom out"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+        <button id="zoomFit" class="zoom-val" title="Fit to window">Fit</button>
+        <button class="icon" id="zoomIn" aria-label="Zoom in"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+    </div>
+    <div class="bar-r">
+      <span id="saveState" class="save muted">Saved</span>
+      <button class="btn btn-ghost" id="saveBtn" title="Save to this browser (⌘S)">Save</button>
+      <button class="btn btn-ghost" id="jsonBtn" title="Download the book as JSON">JSON</button>
+      <button class="btn btn-ink" id="pdfBtn"><svg viewBox="0 0 24 24" class="i"><path d="M12 4v11m0 0 4-4m-4 4-4-4M5 20h14"/></svg><span>Export PDF</span></button>
+      <button class="icon only-narrow" id="panelToggle" aria-label="Toggle inspector"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM15 5v14"/></svg></button>
+    </div>
+  </header>
+
+  <div class="work">
+    <aside class="rail" aria-label="Pages">
+      <div class="rail-head">
+        <span class="eyebrow">Pages <span id="pageCount" class="muted"></span></span>
+        <div class="add-wrap">
+          <button class="btn btn-sm" id="addBtn" aria-haspopup="menu">+ Add</button>
+          <div id="addMenu" class="menu" role="menu" hidden></div>
+        </div>
+      </div>
+      <ol id="rail" class="rail-list"></ol>
+    </aside>
+
+    <main class="stage" id="stage">
+      <iframe id="frameA" class="sheet" title="Guidebook pages"></iframe>
+      <iframe id="frameB" class="sheet" title="Guidebook pages (buffer)" tabindex="-1"></iframe>
+      <div class="read-nav" id="readNav" hidden>
+        <button class="icon lg" id="prevSpread" aria-label="Previous spread"><svg viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg></button>
+        <span id="readPos" class="muted"></span>
+        <button class="icon lg" id="nextSpread" aria-label="Next spread"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></button>
+      </div>
+      <div class="hint" id="hint">Click any text to edit · Click an image to swap it · Drag an image to reframe</div>
+    </main>
+
+    <aside class="inspector" id="inspector" aria-label="Inspector">
+      <div class="tabs" role="tablist">
+        <button data-tab="page" class="on" role="tab">Page</button>
+        <button data-tab="book" role="tab">Issue</button>
+      </div>
+      <div class="tab" id="tabPage"></div>
+      <div class="tab" id="tabBook" hidden></div>
+    </aside>
+  </div>
+  <input type="file" id="fileInput" accept="image/*" hidden>
+</section>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<script type="module" src="/app/app.js"></script>
+</body>
+</html>

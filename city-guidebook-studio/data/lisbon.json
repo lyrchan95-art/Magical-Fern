@@ -1,0 +1,210 @@
+{
+  "meta": {
+    "city": "Lisbon",
+    "country": "Portugal",
+    "issue": "No. 01",
+    "season": "Autumn 2026",
+    "price": "€12",
+    "tagline": "Seven hills, one golden light",
+    "theme": "couture",
+    "url": "guidebook.studio/lisbon",
+    "byline": "The Editors"
+  },
+  "pages": [
+    {
+      "type": "cover",
+      "image": { "scene": "rooftops" },
+      "flash": "The Travel Issue",
+      "lead": { "big": "72", "small": "Hours in the city of seven hills" },
+      "lines": [
+        { "kicker": "Eat", "text": "The tasca revival: where Lisbon really eats" },
+        { "kicker": "After dark", "text": "Fado, rooftops & the best late-night ginjinha" },
+        { "kicker": "Secrets", "text": "Four places the guidebooks forgot" }
+      ],
+      "feature": "The New Lisbon"
+    },
+    { "type": "contents", "heading": "Contents", "image": { "scene": "tram" }, "caption": "Tram 28 climbs towards Graça." },
+    {
+      "type": "letter",
+      "kicker": "Editor's letter",
+      "heading": "Get lost on purpose",
+      "image": { "scene": "balcony" },
+      "body": [
+        "Lisbon does not announce itself. It reveals itself slowly: a tiled facade catching the afternoon sun, a tram bell somewhere below, the smell of grilled sardines drifting up a staircase that seems to lead nowhere in particular.",
+        "We came for a long weekend and kept finding reasons to stay. This guide is the route we wish someone had handed us at the airport: unhurried, a little steep, and full of places where the person behind the counter remembers your order by the second visit.",
+        "Inside you will find three neighbourhoods worth a whole day each, a list of tables we would cross the city for, and the quiet viewpoints that still feel like secrets. Wear good shoes. Say obrigado. And when the light turns gold an hour before sunset, climb something."
+      ],
+      "quote": "The best table in Lisbon is the one you weren't looking for.",
+      "signoff": "The Editors"
+    },
+    {
+      "type": "glance",
+      "kicker": "The essentials",
+      "heading": "Lisbon at a glance",
+      "image": { "scene": "river" },
+      "facts": [
+        { "label": "Best season", "value": "Apr – Jun, Sep – Oct" },
+        { "label": "Language", "value": "Portuguese" },
+        { "label": "Currency", "value": "Euro (€)" },
+        { "label": "Airport to centre", "value": "20 min by metro" },
+        { "label": "Time zone", "value": "WET (UTC+0)" },
+        { "label": "Daily budget", "value": "€90 – €160" }
+      ],
+      "tips": [
+        "Buy a rechargeable Viva Viagem card at any metro station.",
+        "Shops close early on Sundays; plan lunch accordingly.",
+        "The light is best an hour before sunset. Climb something."
+      ]
+    },
+    {
+      "type": "map",
+      "kicker": "Orientation",
+      "water": "Rio Tejo",
+      "heading": "The lay of the land",
+      "pins": [
+        { "label": "Alfama", "note": "Medieval lanes and fado", "x": 70, "y": 46 },
+        { "label": "Baixa", "note": "The grid below the hills", "x": 54, "y": 56 },
+        { "label": "Chiado", "note": "Books, cafés, old money", "x": 43, "y": 50 },
+        { "label": "Bairro Alto", "note": "Nightlife on steep streets", "x": 36, "y": 40 },
+        { "label": "Belém", "note": "Monuments and custard tarts", "x": 10, "y": 70 },
+        { "label": "LX Factory", "note": "Creative reuse by the river", "x": 22, "y": 64 }
+      ]
+    },
+    {
+      "type": "neighborhood",
+      "layout": "feature",
+      "kicker": "Neighbourhood 01",
+      "heading": "Alfama",
+      "deck": "Laundry lines, fado and the oldest streets in the city.",
+      "image": { "scene": "rooftops" },
+      "inset": { "scene": "night" },
+      "story": "The oldest district survived the 1755 earthquake and shows it: a maze of whitewashed lanes, laundry strung between balconies, and fado spilling from doorways after dark. Come early, before the tour groups, and walk downhill. Every staircase rewards you with a slice of river, and every corner seems to hide a tiny tasca with three tables and a grandmother at the stove.",
+      "quote": "Every staircase rewards you with a slice of river.",
+      "places": [
+        { "name": "Miradouro das Portas do Sol", "tag": "View", "note": "Terracotta rooftops to the river. Bring a coffee." },
+        { "name": "Sé de Lisboa", "tag": "Sight", "note": "Romanesque cathedral, free to enter the nave." },
+        { "name": "Tasca do Chico", "tag": "Fado", "note": "Tiny, loud, unforgettable. Arrive by 8pm." },
+        { "name": "Feira da Ladra", "tag": "Market", "note": "Tuesdays and Saturdays. Haggle gently." },
+        { "name": "Casa dos Bicos", "tag": "Sight", "note": "A facade studded with stone diamonds." }
+      ]
+    },
+    {
+      "type": "neighborhood",
+      "layout": "feature",
+      "kicker": "Neighbourhood 02",
+      "heading": "Chiado",
+      "deck": "Poets and bookshops by day; Bairro Alto's street party by night.",
+      "image": { "scene": "tram" },
+      "inset": { "scene": "cafe" },
+      "story": "Poets, bookshops and the grand cafés of Chiado give way, after sunset, to the beautifully chaotic street party of Bairro Alto next door. Same hill, two personalities. Spend the afternoon browsing first editions and taking your coffee standing at the bar, then follow the crowd uphill when the shutters come down and the bars spill out onto the cobbles.",
+      "quote": "Same hill, two personalities.",
+      "places": [
+        { "name": "Livraria Bertrand", "tag": "Books", "note": "The world's oldest operating bookshop, since 1732." },
+        { "name": "A Brasileira", "tag": "Café", "note": "Order a bica beside the bronze poet." },
+        { "name": "Carmo Convent", "tag": "Sight", "note": "A Gothic nave open to the sky." },
+        { "name": "Park Bar", "tag": "Drinks", "note": "Rooftop car-park cocktails, sunset crowd." },
+        { "name": "Miradouro de São Pedro", "tag": "View", "note": "Quiet garden terrace, great at dusk." }
+      ]
+    },
+    {
+      "type": "neighborhood",
+      "layout": "feature",
+      "kicker": "Neighbourhood 03",
+      "heading": "Belém",
+      "deck": "The age of discovery, carved in stone along the river.",
+      "image": { "scene": "arches" },
+      "inset": { "scene": "river" },
+      "story": "Lisbon's age of discovery in stone: monasteries, towers and a monument to the navigators, all along a breezy riverside promenade. Go on a weekday morning, start with the cloister before the coaches arrive, and save the custard tarts for the walk back. The light off the Tagus here is wide and silver, a different city from the narrow lanes uphill.",
+      "quote": "The light off the Tagus here is wide and silver.",
+      "places": [
+        { "name": "Jerónimos Monastery", "tag": "Sight", "note": "Manueline masterpiece; book the cloister online." },
+        { "name": "Pastéis de Belém", "tag": "Taste", "note": "The original custard tart, warm, with cinnamon." },
+        { "name": "Belém Tower", "tag": "Sight", "note": "Climb for river views; queues build after 11." },
+        { "name": "MAAT", "tag": "Culture", "note": "A curved roof you can walk at sunset." },
+        { "name": "Padrão dos Descobrimentos", "tag": "View", "note": "Lift to the top for the whole bay." }
+      ]
+    },
+    {
+      "type": "eat",
+      "layout": "grid",
+      "kicker": "The list",
+      "heading": "Eat & Drink",
+      "deck": "Six tables we would cross the city for.",
+      "items": [
+        { "name": "Time Out Market", "kind": "Food hall", "price": "€€", "note": "Chef stalls under one roof. Good for indecision.", "image": { "scene": "arches" } },
+        { "name": "Cervejaria Ramiro", "kind": "Seafood", "price": "€€€", "note": "Tiger prawns, then a steak sandwich to finish.", "image": { "scene": "sardines" } },
+        { "name": "Zé da Mouraria", "kind": "Portuguese", "price": "€€", "note": "Enormous plates, long communal tables.", "image": { "scene": "tiles" } },
+        { "name": "Manteigaria", "kind": "Bakery", "price": "€", "note": "Watch the tarts come out of the oven.", "image": { "scene": "cafe" } },
+        { "name": "Ginjinha Sem Rival", "kind": "Bar", "price": "€", "note": "A shot of cherry liqueur, standing.", "image": { "scene": "bar" } },
+        { "name": "Taberna da Rua das Flores", "kind": "Petiscos", "price": "€€", "note": "Small plates, daily blackboard, no bookings.", "image": { "scene": "balcony" } }
+      ],
+      "note": "Hours and prices change often. Verify before you go."
+    },
+    {
+      "type": "sight",
+      "kicker": "Culture & sights",
+      "heading": "Ride the 28",
+      "image": { "scene": "tram" },
+      "body": "Tram 28 rattles through Graça, Alfama, Baixa and Estrela on a route older than most countries' railways. Board at Martim Moniz at 8am to get a seat and an empty street, sit on the right-hand side, and let the city tilt past the window.",
+      "caption": "Yellow trams, steep gradients, zero hurry.",
+      "stats": [
+        { "value": "1914", "label": "Route opened" },
+        { "value": "40 min", "label": "End to end" },
+        { "value": "€3.10", "label": "On-board fare" }
+      ]
+    },
+    {
+      "type": "gems",
+      "kicker": "In the know",
+      "heading": "Hidden gems",
+      "gems": [
+        { "name": "Jardim da Estrela at 8am", "note": "Locals walk dogs under the palms. No one else is awake.", "image": { "scene": "balcony" } },
+        { "name": "Ler Devagar", "note": "A bookshop inside a former printing works, with a flying bicycle.", "image": { "scene": "arches" } },
+        { "name": "Senhora do Monte", "note": "The highest viewpoint in the city and the least crowded.", "image": { "scene": "rooftops" } },
+        { "name": "Pensão Amor", "note": "A former brothel turned cocktail bar. Velvet and mischief.", "image": { "scene": "night" } }
+      ]
+    },
+    {
+      "type": "itinerary",
+      "kicker": "The plan",
+      "heading": "72 hours in Lisbon",
+      "days": [
+        { "title": "Old Lisbon", "stops": [
+          { "time": "09:00", "text": "Pastéis and coffee in Baixa" },
+          { "time": "11:00", "text": "Walk up to Alfama via the Sé" },
+          { "time": "14:00", "text": "Lunch at Zé da Mouraria" },
+          { "time": "18:30", "text": "Sunset at Portas do Sol" },
+          { "time": "21:00", "text": "Fado at Tasca do Chico" } ] },
+        { "title": "The western edge", "stops": [
+          { "time": "09:30", "text": "Tram 15 to Belém" },
+          { "time": "10:00", "text": "Jerónimos before the crowds" },
+          { "time": "12:30", "text": "Tarts, then the river path" },
+          { "time": "16:00", "text": "MAAT rooftop" },
+          { "time": "20:00", "text": "Dinner at LX Factory" } ] },
+        { "title": "Hills & books", "stops": [
+          { "time": "10:00", "text": "Livraria Bertrand and A Brasileira" },
+          { "time": "12:00", "text": "Carmo Convent" },
+          { "time": "14:00", "text": "Ler Devagar" },
+          { "time": "18:00", "text": "Park Bar at sunset" },
+          { "time": "22:00", "text": "Bairro Alto, wander freely" } ] }
+      ]
+    },
+    {
+      "type": "practical",
+      "kicker": "The edit",
+      "heading": "Know before you go",
+      "sections": [
+        { "title": "Getting around", "items": ["Metro is fast and cheap; trams are for fun.", "Uber and Bolt are inexpensive after dark.", "Wear flat shoes: the cobbles are slippery."] },
+        { "title": "Money", "items": ["Cards accepted almost everywhere.", "Tipping 5–10% is appreciated, not expected.", "Table snacks (couvert) are charged only if eaten."] },
+        { "title": "Etiquette", "items": ["Dinner starts around 8pm.", "Greet shopkeepers: bom dia, boa tarde.", "Keep voices low on trams and in churches."] }
+      ],
+      "phrases": [
+        { "pt": "Obrigado / Obrigada", "en": "Thank you" },
+        { "pt": "Uma bica, por favor", "en": "An espresso, please" },
+        { "pt": "A conta, por favor", "en": "The bill, please" },
+        { "pt": "Onde fica…?", "en": "Where is…?" }
+      ]
+    },
+    { "type": "back", "heading": "Keep exploring", "image": { "scene": "tiles" } }
+  ]
+}
