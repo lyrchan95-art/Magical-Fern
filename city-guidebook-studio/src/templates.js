@@ -113,7 +113,7 @@ export const templates = {
                 ${[...Array(14)].map((_, i) => `<path d="M${i * 7.5} 0 L${i * 7.5 + 4} 56"/>`).join("")}
                 ${[...Array(8)].map((_, i) => `<path d="M0 ${i * 7} L100 ${i * 7 + 2}"/>`).join("")}
               </g>
-              <text x="70" y="65" font-size="2.6" font-style="italic" fill="#6b8aa0" font-family="serif" letter-spacing=".4">Rio Tejo</text>
+              ${p.water ? `<text x="96" y="66" text-anchor="end" font-size="2.6" font-style="italic" fill="#6b8aa0" font-family="serif" letter-spacing=".4">${esc(p.water)}</text>` : ""}
             </svg>
             ${p.pins.map((q, i) => `<div class="pin" style="left:${q.x}%;top:${q.y}%"><b>${i + 1}</b><span>${esc(q.label)}</span></div>`).join("")}
             <div class="compass">N</div>

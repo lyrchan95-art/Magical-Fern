@@ -16,7 +16,7 @@ import { themes } from "./src/themes.js";
 import { templates, starters } from "./src/templates.js";
 import { sceneNames, sceneSvg } from "./src/art.js";
 import { aiEnabled, models, generateImage } from "./src/ai.js";
-import { generateBook, rewritePage, photoPrompt } from "./src/generate.js";
+import { generateBook, rewritePage, photoPrompt, IMAGE_STYLES } from "./src/generate.js";
 
 const ROOT = fileURLToPath(new URL(".", import.meta.url));
 const PORT = Number(process.env.PORT) || 5173;
@@ -83,21 +83,21 @@ const server = http.createServer(async (req, res) => {
     // ---- AI (OpenRouter). The key never leaves the server. ----
     if (req.method === "GET" && p === "/api/ai/status") return json(res, { enabled: aiEnabled(), ...models() });
     if (req.method === "POST" && p === "/api/generate") {
-      const { city, brief, images = "key", theme } = await body(req);
+      const { city, brief, images = "all", style = "photo", theme } = await body(req);
       if (!city || String(city).length > 80) return send(res, 400, "Give a city name.");
       const ac = new AbortController();
       res.on("close", () => { if (!res.writableEnded) ac.abort(); });
       res.writeHead(200, { "content-type": "application/x-ndjson", "cache-control": "no-store" });
-      for await (const ev of generateBook({ city: String(city).trim(), brief: String(brief || "").slice(0, 400), images, theme }, { signal: ac.signal })) {
+      for await (const ev of generateBook({ city: String(city).trim(), brief: String(brief || "").slice(0, 400), images, style: IMAGE_STYLES.includes(style) ? style : "photo", theme }, { signal: ac.signal })) {
         if (ac.signal.aborted) break;
         res.write(JSON.stringify(ev) + "\n");
       }
       return res.end();
     }
     if (req.method === "POST" && p === "/api/image") {
-      const { prompt, aspect = "3:4", city = "" } = await body(req);
+      const { prompt, aspect = "3:4", city = "", style = "photo" } = await body(req);
       if (!prompt) return send(res, 400, "Describe the image.");
-      return json(res, await generateImage(photoPrompt(city, String(prompt).slice(0, 600)), aspect));
+      return json(res, await generateImage(photoPrompt(city, String(prompt).slice(0, 600), style), aspect));
     }
     if (req.method === "POST" && p === "/api/rewrite") {
       const { city, page, instruction } = await body(req);

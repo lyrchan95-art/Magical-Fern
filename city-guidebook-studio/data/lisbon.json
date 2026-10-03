@@ -59,6 +59,7 @@
     {
       "type": "map",
       "kicker": "Orientation",
+      "water": "Rio Tejo",
       "heading": "The lay of the land",
       "pins": [
         { "label": "Alfama", "note": "Medieval lanes and fado", "x": 70, "y": 46 },

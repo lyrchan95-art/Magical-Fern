@@ -39,6 +39,7 @@ Rules:
 - cover.lead.big is a short number (e.g. "48" or "72") and cover.lead.small completes it; cover.lines are three teasers for content inside; cover.feature is a 2–3 word headline.
 - Three neighbourhood pages, each a real district with 5 real places; tags are one word (View, Sight, Café, Bar, Market, Food, Shop, Park, Culture, Music).
 - eat.items: 6 real restaurants/cafés/bars; price is €, €€ or €€€ (use the local currency symbol instead of € if different).
+- map.water: the name of the main river, bay, lake or sea shown on the map in the local form (e.g. "Rio Tejo", "Salt River"), or "" if there is none.
 - map.pins: the 6 most important areas; x and y are percentages (5–95) approximating real relative positions (x west→east, y north→south).
 - itinerary.days: titles are short; stops use 24h times.
 - practical.phrases: 4 phrases in the local language with English (keys "pt" = local phrase, "en" = English).
@@ -86,6 +87,7 @@ export function sanitize(raw, { city, theme }) {
         q.tips = ARR(q.tips).map((x) => STR(x)).slice(0, 3);
         break;
       case "map":
+        q.water = STR(q.water).slice(0, 40);
         q.pins = ARR(q.pins).slice(0, 6).map((pin) => ({
           label: STR(pin?.label), note: STR(pin?.note),
           x: Math.max(5, Math.min(92, Number(pin?.x) || 50)), y: Math.max(8, Math.min(88, Number(pin?.y) || 50)),
@@ -146,12 +148,16 @@ function aspectFor(p, key) {
   return "3:4";
 }
 
-export function photoPrompt(city, prompt) {
+export const IMAGE_STYLES = ["photo", "illustration"];
+export function photoPrompt(city, prompt, style = "photo") {
+  if (style === "illustration") {
+    return `Editorial travel illustration for a luxury fashion magazine, ${city}. ${prompt}. Hand-painted gouache with flat confident shapes, limited warm palette, subtle paper grain, mid-century travel-poster composition with negative space, recognisably ${city}, no text, no lettering, no watermark, no logos.`;
+  }
   return `Editorial travel photograph for a luxury fashion magazine, ${city}. ${prompt}. Natural light, shot on 35mm film, rich true-to-life colour, elegant composition with negative space, authentic and documentary, no text, no lettering, no watermark, no logos.`;
 }
 
 // Full pipeline as an async generator of progress events (streamed to the client as NDJSON).
-export async function* generateBook({ city, brief, images = "key", theme }, { signal } = {}) {
+export async function* generateBook({ city, brief, images = "all", style = "photo", theme }, { signal } = {}) {
   let spent = 0;
   yield { step: "write", message: `Researching ${city} and writing the issue…` };
   const messages = [{ role: "system", content: SYSTEM }, { role: "user", content: userPrompt(city, brief) }];
@@ -182,16 +188,17 @@ export async function* generateBook({ city, brief, images = "key", theme }, { si
   yield { step: "book", book, cost: spent };
 
   const plan = imagePlan(book, images);
-  if (plan.length) yield { step: "images", total: plan.length, message: `Shooting ${plan.length} photograph${plan.length > 1 ? "s" : ""}…` };
+  const noun = style === "illustration" ? "illustration" : "photograph";
+  if (plan.length) yield { step: "images", total: plan.length, message: `${style === "illustration" ? "Painting" : "Shooting"} ${plan.length} ${noun}${plan.length > 1 ? "s" : ""}…` };
   const queue = [...plan];
   const results = [];
   const worker = async () => {
     for (let job; (job = queue.shift()); ) {
       if (signal?.aborted) return;
       try {
-        const r = await generateImage(photoPrompt(book.meta.city, job.prompt), job.aspect, { signal });
+        const r = await generateImage(photoPrompt(book.meta.city, job.prompt, style), job.aspect, { signal });
         spent += r.cost;
-        results.push({ step: "image", path: job.path, src: r.src, prompt: job.prompt, cost: r.cost });
+        results.push({ step: "image", path: job.path, src: r.src, prompt: job.prompt, style, cost: r.cost });
       } catch (e) {
         results.push({ step: "image-failed", path: job.path, message: e.message });
       }

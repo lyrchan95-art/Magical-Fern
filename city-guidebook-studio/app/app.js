@@ -211,7 +211,7 @@ $("#cityForm").addEventListener("submit", (e) => {
   if (!city) { note.textContent = "Type a city to begin."; $("#cityInput").focus(); return; }
   const hit = catalog.books.find((b) => b.city.toLowerCase() === q || b.id === q);
   if (ai.enabled) {
-    genRequest = { city, brief: $("#briefInput").value.trim(), images: $('input[name="imgmode"]:checked').value, theme: ui.theme };
+    genRequest = { city, brief: $("#briefInput").value.trim(), images: $('input[name="imgmode"]:checked').value, style: $('input[name="imgstyle"]:checked').value, theme: ui.theme };
     location.hash = "#/new";
     return;
   }
@@ -321,7 +321,7 @@ async function showGenerate() {
           if (ev.step === "image") {
             const src = await toJpeg(ev.src).catch(() => ev.src);
             const cur = getPath(book, ev.path) || {};
-            setPath(book, ev.path, { ...cur, src, prompt: ev.prompt || cur.prompt });
+            setPath(book, ev.path, { ...cur, src, prompt: ev.prompt || cur.prompt, style: ev.style, credit: ev.style === "illustration" ? "AI illustration" : "AI-generated" });
             strip.insertAdjacentHTML("beforeend", `<figure class="in"><div class="tbox" style="background:url('${src}') center/cover"></div></figure>`);
           } else failed++;
           step.textContent = `Photographs: ${got - failed} of ${total}${failed ? ` (${failed} kept as illustrations)` : ""}`;
@@ -364,6 +364,7 @@ async function showGenerate() {
 const ed = {
   id: null, book: null, history: [], future: [], sel: 0, img: null, view: store.get("gbs:view") || "spreads",
   zoom: null, read: 0, lastPath: null, lastAt: 0, dirty: false, retoc: false, css: "", rec: null,
+  style: store.get("gbs:style") || "photo", bulk: null,
 };
 let front = $("#frameA"), back = $("#frameB");
 back.classList.add("back");
@@ -387,6 +388,8 @@ async function showEditor(id) {
   setView(ed.view, false);
   updateChrome();
   await rerender();
+  const drawn = imageSlots(ed.book).filter((x) => !x.img.src).length;
+  if (ai.enabled && drawn && !isSample(id)) toast(`${drawn} images are still placeholder drawings.`, { action: "Generate them", onAction: () => { $('.tabs [data-tab="book"]').click(); bulkImages("missing"); }, ms: 9000 });
   setTimeout(() => $("#hint").classList.add("hide"), 7000);
 }
 
@@ -792,10 +795,11 @@ function renderPageTab() {
           ${img.src ? '<button class="btn btn-sm" data-imgact="clear">Use illustration</button>' : ""}
         </div>
         <div class="urlrow"><input id="imgUrl" placeholder="…or paste an image URL" value="${esc(img.src && !String(img.src).startsWith("data:") ? img.src : "")}"><button class="btn btn-sm" data-imgact="url">Use</button></div>
-        ${ai.enabled ? `<div class="ai-box"><h4 style="margin:14px 0 0">Generate a photo</h4>
-          <textarea id="imgPrompt" placeholder="Describe the shot">${esc(img.prompt || defaultPrompt(p, sel))}</textarea>
-          <div class="row"><button class="btn btn-sm btn-ai" data-imgact="gen">Generate photo</button><span class="cost">${esc(aspectFor(p, sel))} · ≈ $0.02</span></div></div>` : ""}
-        <h4 style="margin-top:14px">Illustrations</h4>
+        ${ai.enabled ? `<div class="ai-box"><h4 style="margin:14px 0 0">Generate with AI</h4>
+          <div class="seg full" role="radiogroup" aria-label="Style">${["photo", "illustration"].map((st) => `<button data-style="${st}" class="${ed.style === st ? "on" : ""}">${st === "photo" ? "Photograph" : "Illustration"}</button>`).join("")}</div>
+          <textarea id="imgPrompt" placeholder="Describe the image">${esc(img.prompt || defaultPrompt(p, sel))}</textarea>
+          <div class="row"><button class="btn btn-sm btn-ai" data-imgact="gen">Generate ${ed.style === "illustration" ? "illustration" : "photo"}</button><span class="cost">${esc(aspectFor(p, sel))} · ≈ $0.02</span></div></div>` : ""}
+        <h4 style="margin-top:14px">Placeholder drawings</h4>
         <div class="scenes">${catalog.scenes.map((s) => `<button data-scene="${s}" aria-pressed="${!img.src && img.scene === s}" title="${s}" style="background-image:url('/api/scene/${s}.svg')"></button>`).join("")}</div>
         ${img.src ? `<label class="field" style="margin-top:12px"><span>Photo credit</span><input id="imgCredit" value="${esc(img.credit || "")}" placeholder="Photographer / licence"></label>` : ""}
         <p class="tip" style="margin-top:10px">Drag the image on the page to reframe it.</p>`
@@ -821,6 +825,7 @@ $("#tabPage").addEventListener("click", (e) => {
   const t = e.target.closest("button"); if (!t) return;
   const p = ed.book.pages[ed.sel];
   if (t.dataset.layout) return commit((b) => (b.pages[ed.sel].layout = t.dataset.layout));
+  if (t.dataset.style) { ed.style = t.dataset.style; store.set("gbs:style", ed.style); const pr = $("#imgPrompt")?.value; renderPageTab(); if (pr != null) $("#imgPrompt").value = pr; return; }
   if (t.dataset.pact === "rewrite") return aiRewrite(t);
   if (t.dataset.pact) return pageAction(t.dataset.pact, ed.sel);
   if (t.dataset.pick) { ed.img = t.dataset.pick; markSelection(); renderPageTab(); $(`[data-img="${ed.img}"]`, doc())?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
@@ -861,8 +866,8 @@ async function busy(btn, label, fn) {
   catch (e) { toast(e.message, { error: true, ms: 7000 }); }
   finally { btn.disabled = false; btn.innerHTML = old; }
 }
-async function postJSON(url, body) {
-  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+async function postJSON(url, body, signal) {
+  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal });
   if (!r.ok) throw new Error((await r.text()) || r.statusText);
   return r.json();
 }
@@ -871,10 +876,11 @@ function aiImage(btn, path) {
   if (!prompt) return toast("Describe the photo first.", { error: true });
   const p = ed.book.pages[ed.sel], aspect = aspectFor(p, path);
   return busy(btn, "Shooting…", async () => {
-    const r = await postJSON("/api/image", { prompt, aspect, city: ed.book.meta.city });
+    const style = ed.style;
+    const r = await postJSON("/api/image", { prompt, aspect, city: ed.book.meta.city, style });
     const src = await toJpeg(r.src).catch(() => r.src);
-    commit((b) => setPath(b, path, { scene: getPath(b, path)?.scene, src, prompt, credit: "AI-generated" }));
-    toast(`Photo placed${r.cost ? ` (${money(r.cost)})` : ""}. Drag it on the page to reframe.`);
+    commit((b) => setPath(b, path, { scene: getPath(b, path)?.scene, src, prompt, style, credit: style === "illustration" ? "AI illustration" : "AI-generated" }));
+    toast(`${style === "illustration" ? "Illustration" : "Photo"} placed${r.cost ? ` (${money(r.cost)})` : ""}. Drag it on the page to reframe.`);
   });
 }
 function aiRewrite(btn) {
@@ -909,6 +915,69 @@ async function downscale(file, max) {
   return c.toDataURL("image/jpeg", 0.88);
 }
 
+// ---- every image slot in the book, and bulk AI (re)generation ----
+
+function imageSlots(book) {
+  const out = [];
+  book.pages.forEach((p, i) => {
+    for (const k of ["image", "inset"]) if (p[k] && typeof p[k] === "object") out.push({ path: `pages.${i}.${k}`, page: p });
+    for (const list of ["items", "gems"]) (p[list] || []).forEach((x, j) => x?.image && out.push({ path: `pages.${i}.${list}.${j}.image`, page: p }));
+  });
+  return out.map((s) => ({ ...s, img: getPath(book, s.path) }));
+}
+
+function imagesSection() {
+  const slots = imageSlots(ed.book), drawn = slots.filter((s) => !s.img.src).length, b = ed.bulk;
+  const noun = ed.style === "illustration" ? "illustration" : "photo";
+  if (!ai.enabled) return `<div class="sect"><h4>Images <span class="muted">${slots.length}</span></h4><p class="tip">${drawn} of ${slots.length} images are placeholder drawings. Upload photos per image, or add an OpenRouter key to generate them.</p></div>`;
+  return `<div class="sect"><h4>Images <span class="muted">${slots.length}</span></h4>
+    <p class="tip">${drawn ? `<b style="color:var(--ink)">${drawn} of ${slots.length}</b> are still placeholder drawings, not ${esc(ed.book.meta.city)}.` : `All ${slots.length} images are generated or uploaded.`}</p>
+    <div class="seg full" style="margin:10px 0" role="radiogroup" aria-label="Style">${["photo", "illustration"].map((st) => `<button data-bstyle="${st}" class="${ed.style === st ? "on" : ""}">${st === "photo" ? "Photographs" : "Illustrations"}</button>`).join("")}</div>
+    ${b ? `<p class="tip" id="bulkStatus">${esc(b.label)}</p><div class="row" style="margin-top:8px"><button class="btn btn-sm" data-bulk="stop">Stop</button></div>`
+      : `<div class="row">
+        ${drawn ? `<button class="btn btn-sm btn-ai" data-bulk="missing">Generate ${drawn} ${noun}${drawn > 1 ? "s" : ""} · ≈ ${money(drawn * 0.02)}</button>` : ""}
+        <button class="btn btn-sm" data-bulk="all">Redo all ${slots.length} · ≈ ${money(slots.length * 0.02)}</button>
+      </div>`}
+  </div>`;
+}
+
+let bulkRenderT;
+async function bulkImages(mode) {
+  if (ed.bulk) return;
+  const style = ed.style, noun = style === "illustration" ? "illustration" : "photo";
+  const jobs = imageSlots(ed.book).filter((s) => mode === "all" || !s.img.src);
+  if (!jobs.length) return toast("Every image is already generated.");
+  if (!confirm(`Generate ${jobs.length} ${noun}${jobs.length > 1 ? "s" : ""} for ${ed.book.meta.city}? About ${money(jobs.length * 0.02)} on OpenRouter.`)) return;
+  const ac = new AbortController(), city = ed.book.meta.city;
+  ed.history.push(JSON.stringify(ed.book)); ed.future = []; updateChrome(); // one undo step for the whole batch
+  const st = (ed.bulk = { abort: () => ac.abort(), label: `Starting ${jobs.length}…` });
+  let done = 0, failed = 0, spent = 0;
+  const status = () => { st.label = `${style === "illustration" ? "Painting" : "Shooting"} ${done} of ${jobs.length}${failed ? ` · ${failed} failed` : ""} · ${money(spent)}`; const el = $("#bulkStatus"); if (el) el.textContent = st.label; };
+  renderBookTab(); status();
+  const queue = [...jobs];
+  const worker = async () => {
+    for (let j; (j = queue.shift()) && !ac.signal.aborted; ) {
+      try {
+        const prompt = j.img.prompt || defaultPrompt(j.page, j.path);
+        const r = await postJSON("/api/image", { prompt, aspect: aspectFor(j.page, j.path), city, style }, ac.signal);
+        const src = await toJpeg(r.src).catch(() => r.src);
+        spent += r.cost || 0;
+        if (getPath(ed.book, j.path)) {
+          setPath(ed.book, j.path, { ...getPath(ed.book, j.path), src, prompt, style, credit: style === "illustration" ? "AI illustration" : "AI-generated" });
+          markDirty();
+          clearTimeout(bulkRenderT); bulkRenderT = setTimeout(rerender, 1500);
+        }
+      } catch (e) { if (!ac.signal.aborted) failed++; }
+      done++; status();
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  ed.bulk = null;
+  clearTimeout(bulkRenderT); await rerender();
+  renderBookTab();
+  toast(ac.signal.aborted ? `Stopped. ${done - failed} image(s) updated.` : `Updated ${done - failed} image${done - failed === 1 ? "" : "s"}${failed ? `, ${failed} failed (try again)` : ""} · ${money(spent)}. Undo reverts the batch.`, { ms: 6000 });
+}
+
 const META_FIELDS = [["city", "City"], ["country", "Country"], ["issue", "Issue"], ["season", "Season"], ["price", "Cover price"], ["tagline", "Tagline"], ["byline", "Byline"], ["url", "Live link (QR code)"]];
 function renderBookTab() {
   const m = ed.book.meta, cur = m.theme || "couture";
@@ -918,6 +987,7 @@ function renderBookTab() {
         <span class="sw"><i style="background:${t.paper};border:1px solid #0001"></i><i style="background:${t.ink}"></i><i style="background:${t.accent}"></i></span>
         <span><b>${esc(t.name)}</b><span>${esc(t.blurb)}</span></span></button>`).join("")}
     </div></div>
+    ${imagesSection()}
     <div class="sect"><h4>Masthead & details</h4>
       ${META_FIELDS.map(([k, l]) => `<label class="field"><span>${l}</span><input data-meta="${k}" value="${esc(m[k] || "")}"></label>`).join("")}
     </div>
@@ -934,6 +1004,10 @@ $("#tabBook").addEventListener("click", (e) => {
   const th = e.target.closest("[data-theme]");
   if (th) { commit((b) => (b.meta.theme = th.dataset.theme)); ui.theme = th.dataset.theme; store.set("gbs:theme", ui.theme); return; }
   if (e.target.closest("#revertBtn")) revertToSample();
+  const bulk = e.target.closest("[data-bulk]");
+  if (bulk) { if (bulk.dataset.bulk === "stop") { ed.bulk?.abort(); } else bulkImages(bulk.dataset.bulk); return; }
+  const bst = e.target.closest("[data-bstyle]");
+  if (bst) { ed.style = bst.dataset.bstyle; store.set("gbs:style", ed.style); renderBookTab(); return; }
   if (e.target.closest("#saveNowBtn")) saveNow().then((ok) => ok && toast("Saved to this browser."));
   if (e.target.closest("#copyBtn")) saveCopy();
 });

@@ -86,7 +86,7 @@ const scenes = {
       <rect x='190' y='330' width='220' height='300' rx='26' fill='#f2c230'/>
       <rect x='190' y='330' width='220' height='70' rx='26' fill='${C.white}'/>
       <rect x='240' y='344' width='120' height='34' rx='4' fill='${C.navy}'/>
-      <text x='300' y='370' font-family='Arial' font-weight='700' font-size='24' fill='${C.sun}' text-anchor='middle'>28 Graça</text>
+      <rect x='262' y='356' width='76' height='8' rx='3' fill='${C.sun}' opacity='.8'/>
       <rect x='210' y='410' width='180' height='110' rx='8' fill='${C.glass}'/>
       <path d='M210 410 L300 410 L250 520 L210 520Z' fill='#fff' opacity='.12'/>
       <rect x='190' y='560' width='220' height='14' fill='${C.terraD}'/>
@@ -226,7 +226,6 @@ const scenes = {
     <rect y='0' width='600' height='800' fill='url(#lt)'/>
     <rect x='0' y='520' width='600' height='280' fill='url(#wd)'/><rect x='0' y='510' width='600' height='16' fill='#8a5134'/>
     <path d='M380 230 h50 v70 q30 20 30 60 v150 h-110 v-150 q0 -40 30 -60Z' fill='#4b0f17'/><rect x='392' y='380' width='56' height='70' fill='${C.cream}'/>
-    <text x='420' y='420' font-family='Georgia' font-style='italic' font-size='14' fill='#4b0f17' text-anchor='middle'>Ginja</text>
     ${[110, 200, 290].map((x) => `<path d='M${x} 420 h56 l-8 90 h-40Z' fill='#ffffff' opacity='.35'/><path d='M${x + 5} 450 h46 l-5 56 h-36Z' fill='#9c1426'/><ellipse cx='${x + 28}' cy='450' rx='23' ry='4' fill='#c81e36'/>`).join("")}
     <circle cx='160' cy='560' r='12' fill='#5a0d18'/><circle cx='180' cy='572' r='10' fill='#5a0d18'/>`],
 
@@ -244,7 +243,7 @@ const scenes = {
       <path d='M180 800 L250 520 L360 520 L410 800Z' fill='#4a4238'/>
       ${[...Array(9)].map((_, i) => `<path d='M${180 + i * 6} ${800 - i * 31} H${410 - i * 6}' stroke='#3a332b' stroke-width='3'/>`).join("")}
       <rect x='240' y='380' width='130' height='140' fill='#e9a14c'/><rect x='252' y='392' width='106' height='128' fill='#ffcf7a'/>
-      <rect x='262' y='352' width='86' height='26' fill='#1a2234'/><text x='305' y='371' font-family='Georgia' font-style='italic' font-size='18' fill='#ffcf7a' text-anchor='middle'>Fado</text>
+      <rect x='262' y='352' width='86' height='26' fill='#1a2234'/><rect x='282' y='362' width='46' height='5' rx='2' fill='#ffcf7a'/>
       <circle cx='190' cy='330' r='120' fill='url(#lamp)'/><path d='M190 330 v-60 h40' stroke='#111' stroke-width='5' fill='none'/>
       <path d='M176 330 h28 l-6 20 h-16Z' fill='#ffd99a'/>`];
   },

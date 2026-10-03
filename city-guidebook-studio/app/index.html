@@ -33,11 +33,16 @@
       <div id="aiOpts" class="ai-opts" hidden>
         <label class="brief"><span>Focus <em class="muted">(optional)</em></span>
           <input id="briefInput" placeholder="e.g. food and design, travelling with kids, on a budget" maxlength="200"></label>
-        <div class="photo-mode" role="radiogroup" aria-label="Photography">
-          <span>Photography</span>
-          <label><input type="radio" name="imgmode" value="key" checked> Key photos <em>7 · ≈ $0.15</em></label>
-          <label><input type="radio" name="imgmode" value="all"> Every image <em>22 · ≈ $0.45</em></label>
-          <label><input type="radio" name="imgmode" value="none"> Illustrations <em>≈ $0.01</em></label>
+        <div class="photo-mode" role="radiogroup" aria-label="Image style">
+          <span>Images</span>
+          <label><input type="radio" name="imgstyle" value="photo" checked> Photographs</label>
+          <label><input type="radio" name="imgstyle" value="illustration"> Illustrations</label>
+        </div>
+        <div class="photo-mode" role="radiogroup" aria-label="How many images">
+          <span>Generate</span>
+          <label><input type="radio" name="imgmode" value="all" checked> Every image <em>22 · ≈ $0.45</em></label>
+          <label><input type="radio" name="imgmode" value="key" > Key images <em>7 · ≈ $0.15</em></label>
+          <label><input type="radio" name="imgmode" value="none"> Later, in the editor <em>≈ $0.01</em></label>
         </div>
         <p class="muted small" id="aiModels"></p>
       </div>
