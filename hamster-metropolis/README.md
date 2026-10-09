@@ -33,3 +33,5 @@ The Great Dial-Up Blackout has knocked out every signal tower in the city. You p
 - P or Esc: pause
 
 Progress is saved in your browser's localStorage.
+
+**Demo:** choose **Unlock all** on the phone menu, or open the page with `#unlock` at the end of the URL, to unlock every district, mode and citizen. Choose **Lock again** to return to your real progress.

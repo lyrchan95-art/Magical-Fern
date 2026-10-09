@@ -1185,6 +1185,17 @@ let toastT=0; function toast(msg){ const t=$('toast'); t.textContent=msg; t.clas
 const SCREENS=['scr-title','scr-msg','scr-map','scr-result','scr-snake','scr-cit','scr-pause'];
 function showScreen(id){ SCREENS.forEach(s=>{ $(s).hidden = s!==id; }); if(id){ const f=$(id).querySelector('.navi, .btn, .node:not([disabled])'); if(f && !isTouch) setTimeout(()=>f.focus({preventScroll:true}),30); } }
 
+// ---------- Demo unlock ----------
+const levelOpen = i => i===0 || save.demo || save.stars[i-1]>0;
+const endlessOpen = () => save.demo || save.stars[4]>0;
+const dailyOpen = () => save.demo || save.stars[0]>0;
+function setDemo(on){
+  if(on===!!save.demo) return;
+  if(on){ save.realCitizens=[...save.citizens]; save.citizens=CITIZENS.map((_,i)=>i); save.demo=true; toast('Everything unlocked: 5 districts, Uncharted, Daily Dash, 40 citizens'); }
+  else { save.citizens = save.realCitizens && save.realCitizens.length ? save.realCitizens : [0]; if(!save.citizens.includes(save.selected)) save.selected=save.citizens[0]; delete save.realCitizens; save.demo=false; toast('Back to your real progress'); }
+  persist();
+}
+
 // ---------- Title menu ----------
 let menuSel=0, menuItems=[];
 function nextLevelIdx(){ for(let i=0;i<5;i++) if(save.stars[i]===0) return i; return 'endless'; }
@@ -1194,8 +1205,9 @@ function buildTitle(){
     { label: save.runs ? 'Continue' : 'New game', right: nxt==='endless' ? '∞' : `L${nxt+1}`, act:()=>{ if(!save.introSeen) openIntro(); else openLevelMsg(nxt); } },
     { label:'City map', right:`${save.stars.reduce((a,b)=>a+b,0)}★`, act:openMap },
     { label:'Citizens', right:`${save.citizens.length}/40`, act:openCitizens },
-    { label:'Daily', right: save.daily.date===String(todaySeed()) ? Math.floor(save.daily.best).toLocaleString() : 'new', act:()=>openDaily(), lock: save.unlocked<2 && save.stars[0]===0, lockMsg:'Relight Bubblegum Borough first' },
+    { label:'Daily', right: save.daily.date===String(todaySeed()) ? Math.floor(save.daily.best).toLocaleString() : 'new', act:()=>openDaily(), lock: !dailyOpen(), lockMsg:'Relight Bubblegum Borough first' },
     { label:'Snake', right:'bonus', act:()=>openSnake(false) },
+    { label: save.demo ? 'Lock again' : 'Unlock all', right: save.demo ? 'demo on' : 'demo', act:()=>{ setDemo(!save.demo); buildTitle(); } },
   ];
   const ul=$('titleMenu'); ul.innerHTML='';
   menuItems.forEach((m,i)=>{ const li=document.createElement('li'); const b=document.createElement('button'); b.innerHTML=`<span></span><span></span>`; b.children[0].textContent=m.label; b.children[1].textContent=m.lock?'locked':m.right; b.className=i===menuSel?'sel':''; b.addEventListener('click',()=>{ menuSel=i; Sound.init(); selectMenu(); }); b.addEventListener('mouseenter',()=>{ menuSel=i; paintMenu(); }); li.append(b); ul.append(li); });
@@ -1238,7 +1250,7 @@ function openMap(){
   G.mode='menu';
   const list=$('mapList'); list.innerHTML='';
   LEVELS.forEach((L,i)=>{
-    const unlocked = i===0 || save.stars[i-1]>0;
+    const unlocked = levelOpen(i);
     const b=document.createElement('button'); b.className='node'; b.disabled=!unlocked;
     b.innerHTML=`<span class="swatch" style="background:${unlocked?SWATCH[i]:'#c9c0d6'}">${unlocked?i+1:'?'}</span><span><span class="nm"></span><br><span class="sub"></span></span><span class="st"></span>`;
     b.querySelector('.nm').textContent = unlocked ? L.name : 'Unknown district';
@@ -1247,12 +1259,12 @@ function openMap(){
     if(unlocked) b.onclick=()=>openLevelMsg(i);
     list.append(b);
   });
-  const endUnlocked = save.stars[4]>0;
+  const endUnlocked = endlessOpen();
   const e=document.createElement('button'); e.className='node'; e.disabled=!endUnlocked;
   e.innerHTML=`<span class="swatch" style="background:${endUnlocked?'linear-gradient(135deg,#5b8def,#ff8fc7)':'#c9c0d6'}">∞</span><span><span class="nm">${endUnlocked?'Uncharted territory':'Beyond the static'}</span><br><span class="sub">${endUnlocked?`Endless · best ${Math.floor(save.endlessBest).toLocaleString()} · ${save.discovered} districts found`:'Relight all 5 towers'}</span></span><span class="st"></span>`;
   if(endUnlocked) e.onclick=()=>openLevelMsg('endless');
   list.append(e);
-  const d=document.createElement('button'); d.className='node'; const dOk=save.stars[0]>0; d.disabled=!dOk;
+  const d=document.createElement('button'); d.className='node'; const dOk=dailyOpen(); d.disabled=!dOk;
   d.innerHTML=`<span class="swatch" style="background:${dOk?'#f5b82e':'#c9c0d6'}">D</span><span><span class="nm">Daily Dash</span><br><span class="sub">${dOk?`${todayLabel()} · same course for everyone`:'Relight Bubblegum Borough first'}</span></span><span class="st"></span>`;
   if(dOk) d.onclick=openDaily; list.append(d);
   const aw=$('atlasWrap'); aw.innerHTML='';
@@ -1475,6 +1487,7 @@ function frame(now){
   render();
   requestAnimationFrame(frame);
 }
+if(location.hash==='#unlock') setDemo(true);
 goTitle();
 requestAnimationFrame(frame);
 </script>
